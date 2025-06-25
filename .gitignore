@@ -1,0 +1,49 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Environment and config files
+.env
+docker.env
+*.env
+
+# SQLite and other local DBs
+
+# Node.js
+node_modules/
+
+# Docker artifacts
+Dockerfile
+docker-compose.override.yml
+
+# Logs and debug
+*.log
+*.pid
+*.bak
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Nginx/temporary build/config files
+*.swp
+
+# Uploads & user-generated content (optional)
+uploads/
+static/
+
+# Compiled files or output
+*.out
+*.o
+
+# CSV or scraped data
+*.csv
+
+# Ignore secrets and untracked credentials
+**/secrets*.json

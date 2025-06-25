@@ -1,0 +1,28 @@
+{% extends "_base.html" %}
+
+{% block title %}Verify OTP - CloudKeeper{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <h2 class="text-center mb-4">Verify OTP</h2>
+        <p class="text-center">An OTP has been sent to <strong>{{ email }}</strong>. Please enter it below.</p>
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+        {% if message %} {# For messages like "OTP resent" #}
+            <div class="alert alert-info">{{ message }}</div>
+        {% endif %}
+        <form method="POST">
+            <div class="mb-3">
+                <label for="otp" class="form-label">OTP</label>
+                <input type="text" class="form-control" id="otp" name="otp" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Verify</button>
+        </form>
+         <p class="mt-3 text-center">
+            Didn't receive an OTP or need a new one? <a href="{{ url_for('signup') }}">Try signing up again</a> to resend.
+        </p>
+    </div>
+</div>
+{% endblock %}

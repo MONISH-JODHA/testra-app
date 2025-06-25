@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Frontend</title>
+</head>
+<body>
+  <h1>Hello Mzaiee !!</h1>
+  <script>
+    fetch('/api').then(res => res.json()).then(data => {
+      document.body.innerHTML += `<p>${data.message}</p>`;
+    });
+  </script>
+</body>
+</html>

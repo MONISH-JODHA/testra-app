@@ -1,0 +1,20 @@
+{% extends "_base.html" %}
+
+{% block title %}Dashboard - CloudKeeper{% endblock %}
+
+{% block content %}
+<div class="px-4 py-5 my-5 text-center">
+    <h1 class="display-5 fw-bold">Welcome, {{ session.username }}!</h1>
+    <div class="col-lg-6 mx-auto">
+      <p class="lead mb-4">
+        You are successfully logged into the CloudKeeper EC2 Price Analyzer.
+        Navigate to the EC2 Analysis tool to explore pricing data, find the best value instances,
+        and make informed decisions for your cloud infrastructure.
+      </p>
+      <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+        <a href="{{ url_for('ec2_analysis_tool') }}" class="btn btn-primary btn-lg px-4 gap-3">Go to EC2 Analysis of AWS</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-outline-secondary btn-lg px-4">Logout</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
