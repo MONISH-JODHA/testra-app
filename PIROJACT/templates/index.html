@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>User Activity & Ticket Dashboard - CloudKeeper</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #0052CC;
+            --secondary-color: #0065FF;
+            --cta-color: #00A3BF;
+            --text-dark: #172B4D;
+            --text-light: #505F79;
+            --background-light: #F4F5F7;
+            --white: #FFFFFF;
+            --border-color: #DFE1E6;
+            --success-bg: #E3FCEF;
+            --success-text: #006644;
+            --info-bg: #DEEBFF;
+            --info-text: #0052CC;
+            --warning-bg: #FFFAE6;
+            --warning-text: #FF8B00;
+            --error-bg: #FFEBEE;
+            --error-text: #B00020;
+            --font-family: 'Inter', 'Arial', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-family);
+            line-height: 1.6;
+            color: var(--text-dark);
+            background-color: var(--background-light);
+            padding-top: 65px;
+        }
+        .app-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+        .app-header {
+            background-color: var(--white); padding: 12px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            position: fixed; top: 0; left: 0; width: 100%;
+            z-index: 1010; border-bottom: 1px solid var(--border-color);
+        }
+        .header-content {
+            display: flex; justify-content: space-between; align-items: center;
+            max-width: 1200px; margin: 0 auto; padding: 0 20px;
+        }
+        .app-logo-text {
+            font-size: 1.4em; font-weight: 700; color: var(--text-dark);
+            text-decoration: none; display: flex; align-items: center;
+        }
+        .app-logo-text img { height: 32px; vertical-align: middle; margin-right: 10px;}
+
+        .main-navigation { display: flex; align-items: center; }
+        .main-navigation .user-actions { display: flex; align-items: center; }
+        .main-navigation .user-actions a {
+            color: var(--text-light); font-weight: 500; margin-left: 10px;
+            text-decoration: none; padding: 8px 14px; border-radius: 6px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            display: inline-flex; align-items: center; font-size: 0.95em;
+        }
+        .main-navigation .user-actions a i { margin-right: 6px; font-size: 0.9em; }
+        .main-navigation .user-actions a:hover { background-color: var(--background-light); color: var(--primary-color); }
+        .main-navigation .user-actions .btn-nav { border: 1px solid transparent; }
+        .main-navigation .user-actions .btn-nav:hover { border-color: var(--primary-color); }
+        .main-navigation .user-actions .btn-logout {
+            background-color: var(--primary-color); color: var(--white); border: 1px solid var(--primary-color);
+        }
+        .main-navigation .user-actions .btn-logout:hover { background-color: var(--secondary-color); border-color: var(--secondary-color); }
+
+        .mobile-nav-toggle {
+            display: none; background: none; border: 1px solid var(--border-color);
+            padding: 8px 10px; color: var(--primary-color); font-size: 1.4em;
+            cursor: pointer; border-radius: 6px; line-height: 1; z-index: 1011;
+        }
+        .mobile-nav-toggle:hover { background-color: var(--background-light); }
+        .mobile-nav-toggle .fa-times { display: none; }
+        .mobile-nav-toggle.active .fa-bars { display: none; }
+        .mobile-nav-toggle.active .fa-times { display: inline; }
+
+        .main-content { padding: 30px 20px; }
+        .page-title {
+            font-size: 2em; font-weight: 600; color: var(--text-dark);
+            margin-bottom: 30px; text-align: left;
+        }
+        .stats-summary { display: flex; gap: 20px; margin-bottom: 40px; flex-wrap: wrap; }
+        .stat-card {
+            background-color: var(--white); padding: 25px; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06); flex: 1; text-align: center;
+            min-width: 220px;
+        }
+        .stat-card h4 { font-size: 1.05em; color: var(--text-light); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-card p { font-size: 2.2em; font-weight: 700; color: var(--primary-color); }
+
+        .charts-row {
+            display: flex; gap: 30px; margin-bottom: 40px;
+            align-items: stretch; flex-wrap: wrap;
+        }
+        .chart-container-wrapper {
+            flex: 1 1 350px;
+            min-width: 300px;
+            background-color: var(--white); padding: 25px;
+            border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            position: relative; display: flex; flex-direction: column;
+            height: 380px;
+        }
+         .chart-container-wrapper h3 {
+            font-size: 1.2em; margin-bottom: 20px;
+            text-align: center; color: var(--text-dark); font-weight: 600;
+        }
+        .chart-container-wrapper canvas {
+            max-height: calc(100% - 45px);
+            max-width: 100%; display: block; margin: auto;
+        }
+
+        .table-container { flex: 1; min-width: 100%; margin-top: 0; }
+        .styled-table-wrapper {
+            background-color: var(--white); border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.07); overflow-x: auto; padding: 25px;
+        }
+        .table-title {
+            font-size: 1.4em; font-weight: 600; color: var(--text-dark);
+            margin-bottom: 20px; text-align: center;
+        }
+        .styled-table { width: 100%; border-collapse: collapse; min-width: 500px; }
+        .styled-table th, .styled-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); }
+        .styled-table thead th {
+            background-color: var(--success-bg); color: var(--success-text);
+            font-weight: 600; font-size: 0.9em; text-transform: uppercase;
+            letter-spacing: 0.5px; border-bottom: 2px solid var(--primary-color); cursor: pointer;
+        }
+        .styled-table thead th i { margin-left: 5px; }
+        .styled-table thead th:hover { background-color: #d1e7dd; }
+        .styled-table tbody tr:hover { background-color: #f9fafb; }
+        .styled-table tbody tr:last-child td { border-bottom: none; }
+        .styled-table tbody td a { font-weight: 500; text-decoration: none; color: var(--primary-color); }
+        .styled-table tbody td a:hover { text-decoration: underline; color: var(--secondary-color); }
+
+        #toastNotifications {
+            position: fixed; top: 80px; right: 20px; z-index: 1005;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast-message {
+            background-color: var(--success-bg); color: var(--success-text);
+            padding: 15px 20px; border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+            min-width: 280px; max-width: 400px;
+            opacity: 1;
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            transform: translateX(0); font-size: 0.95em;
+        }
+        .toast-message.error { background-color: var(--error-bg); color: var(--error-text); }
+        .toast-message.info { background-color: var(--info-bg); color: var(--info-text); }
+        .toast-message.hide { opacity: 0; transform: translateX(110%); }
+
+        .app-footer {
+            text-align: center; padding: 20px 0; margin-top: 30px;
+            font-size: 0.9em; color: var(--text-light); border-top: 1px solid var(--border-color);
+        }
+
+        @media (max-width: 992px) {
+            .mobile-nav-toggle { display: block; }
+            .main-navigation {
+                display: none; flex-direction: column; align-items: stretch;
+                position: absolute; top: calc(100% + 1px);
+                left: 0; right: 0;
+                background-color: var(--white); padding: 10px 0;
+                border-top: 1px solid var(--border-color);
+                box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+                z-index: 1000; max-height: calc(100vh - 65px); overflow-y: auto;
+                transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+                transform: translateY(-10px); opacity: 0; pointer-events: none;
+            }
+            .main-navigation.active { display: flex; transform: translateY(0); opacity: 1; pointer-events: auto; }
+            .main-navigation .user-actions { flex-direction: column; width: 100%; }
+            .main-navigation .user-actions a {
+                margin-left: 0; margin-bottom: 0; padding: 14px 20px;
+                text-align: left; border-radius: 0; border: none;
+                border-bottom: 1px solid var(--background-light); width: 100%;
+            }
+            .main-navigation .user-actions a:last-child { border-bottom: none; }
+            .main-navigation .user-actions a:hover { background-color: var(--primary-color); color: var(--white); }
+            .main-navigation .user-actions .btn-logout { background-color: var(--primary-color); color: var(--white); border-radius: 0; }
+            .main-navigation .user-actions .btn-logout:hover { background-color: var(--secondary-color); }
+        }
+
+        @media (max-width: 768px) {
+            body { padding-top: 58px; }
+            .page-title { font-size: 1.6em; margin-bottom: 20px; }
+            .main-content { padding: 20px 15px; }
+            .stats-summary { flex-direction: column; gap: 15px; }
+            .stat-card { min-width: 100%; }
+            .charts-row { flex-direction: column; gap: 20px; }
+            .chart-container-wrapper {
+                flex-basis: auto; min-width: 100%; height: 300px; padding: 15px;
+            }
+             .chart-container-wrapper h3 { font-size: 1.1em; margin-bottom: 15px; }
+            .table-container { margin-top: 30px; }
+            .table-title { font-size: 1.2em; }
+            .styled-table-wrapper { padding: 15px; }
+            .styled-table th, .styled-table td { padding: 8px 10px; font-size: 0.9em; }
+            .styled-table {min-width: auto;}
+        }
+        @media (max-width: 576px) {
+            #toastNotifications { top: 70px; right: 10px; left: 10px; align-items: center; }
+            .toast-message { min-width: auto; width: calc(100% - 20px); font-size: 0.9em; }
+            .user-actions a { padding: 10px 15px; }
+            .app-logo-text { font-size: 1.2em; }
+            .app-logo-text img { height: 28px; }
+            .mobile-nav-toggle { font-size: 1.2em; padding: 6px 8px;}
+            .stat-card p { font-size: 1.8em;}
+            .chart-container-wrapper { height: 280px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <a href="{{ url_for('home_or_main') }}" class="app-logo-text">
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="CloudKeeper Logo">
+            </a>
+            <button class="mobile-nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <i class="fas fa-bars" aria-hidden="true"></i>
+                <i class="fas fa-times" aria-hidden="true" style="display:none;"></i>
+            </button>
+            <nav class="main-navigation" id="mainNav">
+                <div class="user-actions">
+                    <a href="{{ url_for('form') }}" class="btn-nav"><i class="fas fa-plus-circle"></i> New Ticket</a>
+                    <a href="{{ url_for('view_tickets_page') }}" class="btn-nav"><i class="fas fa-list-alt"></i> All Tickets</a>
+                    <a href="{{ url_for('user_ticket_view_page') }}" class="btn-nav"><i class="fas fa-user-tag"></i> Tickets by User</a>
+                    <a href="{{ url_for('index_counts_page') }}" class="btn-nav"><i class="fas fa-chart-bar"></i> User Counts</a>
+                    <a href="{{ url_for('gdoc_importer_page') }}" class="btn-nav"><i class="fab fa-google-drive"></i> Import GDoc</a>
+                    <a href="{{ url_for('chatbot_page') }}" class="btn-nav"><i class="fas fa-comments"></i> Chat Assistant</a>
+                    <a href="{{ url_for('logout') }}" class="btn-logout">Logout <i class="fas fa-sign-out-alt"></i></a>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <div id="toastNotifications"></div>
+
+    <main class="main-content">
+        <div class="app-container">
+            <h1 class="page-title">User Activity & Ticket Dashboard</h1>
+
+            <div class="stats-summary">
+                <div class="stat-card">
+                    <h4>Total Users with Tickets</h4>
+                    <p id="totalUsersCount">0</p>
+                </div>
+                <div class="stat-card">
+                    <h4>Total Tickets Submitted</h4>
+                    <p id="totalTicketsCount">0</p>
+                </div>
+                 <div class="stat-card">
+                    <h4>Open Tickets</h4>
+                    <p id="openTicketsCount">0</p>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-container-wrapper">
+                    <h3>Tickets per User</h3>
+                    <canvas id="userTicketBarChart"></canvas>
+                </div>
+                <div class="chart-container-wrapper">
+                    <h3>Ticket Status Distribution</h3>
+                    <canvas id="ticketStatusPieChart"></canvas>
+                </div>
+                <div class="chart-container-wrapper">
+                    <h3>Tickets Created Over Time</h3>
+                    <canvas id="ticketsOverTimeChart"></canvas>
+                </div>
+            </div>
+
+            <div class="table-container" style="margin-top: 30px;">
+                <div class="styled-table-wrapper">
+                    <h3 class="table-title">User Ticket Summary</h3>
+                    <table class="styled-table" id="userCountsTable">
+                        <thead>
+                            <tr>
+                                <th data-sort="username">User Name <i class="fas fa-sort"></i></th>
+                                <th data-sort="ticket_count">Number of Tickets <i class="fas fa-sort"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="userCountsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        <p>© 2025 CloudKeeper (Team Laadle). All rights reserved.</p>
+    </footer>
+
+    <script>
+        const usersDataFromFlask = [
+            {% for user_row in users %}
+                { username: "{{ user_row[0]|e }}", ticket_count: {{ user_row[1] }} },
+            {% else %}
+            {% endfor %}
+        ];
+
+        let sortDirection = { username: 'asc', ticket_count: 'asc' };
+        let currentSortColumn = 'username';
+
+        let userTicketBarChartInstance = null;
+        let ticketStatusPieChartInstance = null;
+        let ticketsOverTimeChartInstance = null;
+
+        const socket = io();
+        socket.on('connect', () => { console.log('Socket.IO connected (Dashboard Page)!'); });
+        socket.on('disconnect', () => { console.log('Socket.IO disconnected (Dashboard Page).'); });
+
+        socket.on('new_ticket_notification', function(data) {
+            showToastNotification(`New Ticket #${data.id} by ${data.created_by}`, 'info');
+            refreshDashboardData();
+        });
+        socket.on('ticket_updated_globally', function(data) {
+            showToastNotification(data.message || `Ticket #${data.id} was updated.`, 'info');
+            refreshDashboardData();
+        });
+         socket.on('ticket_update_notification', function(data){
+            if(data.created_by === "{{ username }}"){
+                 showToastNotification(data.message, 'info');
+            }
+        });
+
+        function showToastNotification(message, type = 'success') {
+            const toastContainer = document.getElementById('toastNotifications');
+            if (!toastContainer) {
+                console.warn("Toast container not found, falling back to alert.");
+                alert(message); return;
+            }
+            const toast = document.createElement('div');
+            toast.className = `toast-message ${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('hide');
+                setTimeout(() => { toast.remove(); }, 500);
+            }, 5000);
+        }
+
+        function renderTable(data) {
+            const tableBody = document.getElementById('userCountsTableBody');
+            tableBody.innerHTML = '';
+            if (!data || data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding: 20px; color: var(--text-light);">No user data available.</td></tr>';
+                return;
+            }
+            data.forEach(user => {
+                const row = tableBody.insertRow();
+                const cellUser = row.insertCell();
+                const cellCount = row.insertCell();
+                const userLink = document.createElement('a');
+                userLink.href = `{{ url_for('user_ticket_view_page') }}#${encodeURIComponent(user.username)}`;
+                userLink.textContent = user.username;
+                cellUser.appendChild(userLink);
+                cellCount.textContent = user.ticket_count;
+            });
+        }
+
+        function sortData(column) {
+            const newDirection = (column === currentSortColumn && sortDirection[column] === 'asc') ? 'desc' : 'asc';
+            Object.keys(sortDirection).forEach(key => {
+                if (key !== column) sortDirection[key] = 'asc';
+            });
+            sortDirection[column] = newDirection;
+            currentSortColumn = column;
+            usersDataFromFlask.sort((a, b) => {
+                let valA = a[column];
+                let valB = b[column];
+                if (column === 'username') {
+                    valA = valA.toLowerCase();
+                    valB = valB.toLowerCase();
+                }
+                if (valA < valB) return newDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return newDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+            renderTable(usersDataFromFlask);
+            updateSortIcons();
+        }
+
+        function updateSortIcons() {
+            document.querySelectorAll('#userCountsTable thead th i').forEach(icon => {
+                icon.className = 'fas fa-sort';
+            });
+            const activeThIcon = document.querySelector(`#userCountsTable thead th[data-sort="${currentSortColumn}"] i`);
+            if (activeThIcon) {
+                activeThIcon.className = `fas fa-sort-${sortDirection[currentSortColumn] === 'asc' ? 'up' : 'down'}`;
+            }
+        }
+
+        function renderUserTicketBarChart(data) {
+            const canvasEl = document.getElementById('userTicketBarChart');
+            if (!canvasEl) return;
+             if (!data || data.length === 0) {
+                const barCtx = canvasEl.getContext('2d');
+                if (userTicketBarChartInstance) userTicketBarChartInstance.destroy();
+                barCtx.clearRect(0,0,canvasEl.width,canvasEl.height);
+                barCtx.textAlign = 'center'; barCtx.font = '14px var(--font-family)';
+                barCtx.fillStyle = 'var(--text-light)';
+                barCtx.fillText('No data for user ticket chart.', canvasEl.width/2, canvasEl.height/2);
+                return;
+            }
+            const ctx = canvasEl.getContext('2d');
+            const labels = data.map(user => {
+                if (user.username) {
+                    const namePart = user.username.split('@')[0];
+                    const firstName = namePart.split('.')[0];
+                    return firstName.charAt(0).toUpperCase() + firstName.slice(1);
+                }
+                return 'Unknown';
+            });
+            const counts = data.map(user => user.ticket_count);
+            const chartColors = ['rgba(0, 82, 204, 0.7)', 'rgba(0, 101, 255, 0.7)', 'rgba(0, 163, 191, 0.7)','rgba(0, 128, 128, 0.7)', 'rgba(75, 192, 192, 0.7)'];
+            const backgroundColors = labels.map((_, i) => chartColors[i % chartColors.length]);
+
+            if (userTicketBarChartInstance) userTicketBarChartInstance.destroy();
+            userTicketBarChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Tickets per User',
+                        data: counts,
+                        backgroundColor: backgroundColors,
+                        borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                    layout: { padding: { left: 10, right: 20, top: 10, bottom: 20 } }, 
+                    scales: {
+                        x: { beginAtZero: true, ticks: { precision: 0 } },
+                        y: { ticks: { autoSkip: false, font: { size: 11 } } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: {
+                            label: function(context) {
+                                const originalUsername = data[context.dataIndex].username;
+                                return `${originalUsername}: ${context.raw} tickets`;
+                            }
+                        } }
+                    }
+                }
+            });
+        }
+
+        async function fetchTicketStatusData() {
+            try {
+                const response = await fetch("{{ url_for('get_ticket_status_summary') }}");
+                if (!response.ok) throw new Error('Failed to fetch status data: ' + response.statusText);
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                renderTicketStatusPieChart({
+                    labels: data.chart_labels,
+                    counts: data.chart_counts,
+                    colors: data.chart_colors
+                });
+                document.getElementById('openTicketsCount').textContent = data.open_tickets_count || 0;
+            } catch (error) {
+                console.error("Error fetching ticket status data:", error);
+                renderTicketStatusPieChart(null);
+                document.getElementById('openTicketsCount').textContent = 'N/A';
+            }
+        }
+
+        function renderTicketStatusPieChart(statusData) {
+            const canvasEl = document.getElementById('ticketStatusPieChart');
+            if (!canvasEl) return;
+             if (!statusData || !statusData.labels || !statusData.counts || statusData.labels.length === 0) {
+                const pieCtx = canvasEl.getContext('2d');
+                if (ticketStatusPieChartInstance) ticketStatusPieChartInstance.destroy();
+                pieCtx.clearRect(0,0,canvasEl.width,canvasEl.height);
+                pieCtx.textAlign = 'center'; pieCtx.font = '14px var(--font-family)';
+                pieCtx.fillStyle = 'var(--text-light)';
+                pieCtx.fillText('No data for status chart.', canvasEl.width/2, canvasEl.height/2);
+                return;
+            }
+            const ctx = canvasEl.getContext('2d');
+            if (ticketStatusPieChartInstance) ticketStatusPieChartInstance.destroy();
+            ticketStatusPieChartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: statusData.labels,
+                    datasets: [{
+                        label: 'Ticket Statuses',
+                        data: statusData.counts,
+                        backgroundColor: statusData.colors,
+                        borderColor: statusData.colors ? statusData.colors.map(color => color.replace('0.8', '1').replace('0.7','1')) : [],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 15, padding: 15, font: { size: 11 } } },
+                        title: { display: false },
+                        tooltip: { callbacks: {
+                            label: function(context) {
+                                let label = context.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed !== null) label += context.parsed;
+                                let total = context.chart.getDatasetMeta(0).total;
+                                if (total > 0) {
+                                    let percentage = (context.raw / total * 100).toFixed(1) + '%';
+                                    label += ' (' + percentage + ')';
+                                }
+                                return label;
+                            }
+                        }}
+                    }
+                }
+            });
+        }
+
+        async function fetchTicketsOverTimeData() {
+            try {
+                const response = await fetch("{{ url_for('get_tickets_over_time_counts') }}");
+                if (!response.ok) throw new Error('Failed to fetch ticket trend data: ' + response.statusText);
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                renderTicketsOverTimeChart(data);
+            } catch (error) {
+                console.error("Error fetching tickets over time data:", error);
+                renderTicketsOverTimeChart(null);
+            }
+        }
+
+        function renderTicketsOverTimeChart(data) {
+            const canvasEl = document.getElementById('ticketsOverTimeChart');
+            if (!canvasEl) return;
+            if (!data || !data.labels || !data.counts || data.labels.length === 0) {
+                const ctx = canvasEl.getContext('2d');
+                if(ticketsOverTimeChartInstance) ticketsOverTimeChartInstance.destroy();
+                ctx.clearRect(0,0,canvasEl.width,canvasEl.height);
+                ctx.textAlign = 'center'; ctx.font = '14px var(--font-family)';
+                ctx.fillStyle = 'var(--text-light)';
+                ctx.fillText('No data for ticket trends.', canvasEl.width/2, canvasEl.height/2);
+                return;
+            }
+            const ctx = canvasEl.getContext('2d');
+            if (ticketsOverTimeChartInstance) ticketsOverTimeChartInstance.destroy();
+            ticketsOverTimeChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Tickets Created',
+                        data: data.counts,
+                        borderColor: 'var(--primary-color)',
+                        backgroundColor: 'rgba(0, 82, 204, 0.2)',
+                        tension: 0.1, fill: true, pointRadius: 3, pointBackgroundColor: 'var(--primary-color)'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { autoSkip: true, maxTicksLimit: 7 } } },
+                    plugins: { legend: { display: true, position: 'top' }, tooltip: { mode: 'index', intersect: false, } }
+                }
+            });
+        }
+
+        function updateSummaryStats(data) {
+            document.getElementById('totalUsersCount').textContent = data ? data.length : 0;
+            const totalTickets = data ? data.reduce((sum, user) => sum + user.ticket_count, 0) : 0;
+            document.getElementById('totalTicketsCount').textContent = totalTickets;
+        }
+        
+        async function refreshDashboardData() {
+
+            renderTable(usersDataFromFlask);
+            if (usersDataFromFlask && usersDataFromFlask.length > 0) {
+                updateSortIcons();
+                renderUserTicketBarChart(usersDataFromFlask);
+            } else {
+                renderUserTicketBarChart(null);
+            }
+            updateSummaryStats(usersDataFromFlask);
+
+            await fetchTicketStatusData();
+            await fetchTicketsOverTimeData();
+            console.log("Dashboard data refreshed.");
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            renderTable(usersDataFromFlask);
+            if (usersDataFromFlask && usersDataFromFlask.length > 0) {
+                updateSortIcons();
+                renderUserTicketBarChart(usersDataFromFlask);
+            } else {
+                 renderUserTicketBarChart(null);
+            }
+            updateSummaryStats(usersDataFromFlask);
+            fetchTicketStatusData();
+            fetchTicketsOverTimeData();
+
+            document.querySelectorAll('#userCountsTable thead th').forEach(th => {
+                th.addEventListener('click', () => {
+                    const column = th.getAttribute('data-sort');
+                    if (column) sortData(column);
+                });
+            });
+
+            const mobileNavToggle = document.querySelector('.mobile-nav-toggle');
+            const mainNav = document.getElementById('mainNav');
+            const hamburgerIcon = mobileNavToggle ? mobileNavToggle.querySelector('.fa-bars') : null;
+            const closeIcon = mobileNavToggle ? mobileNavToggle.querySelector('.fa-times') : null;
+
+            if (mobileNavToggle && mainNav && hamburgerIcon && closeIcon) {
+                mobileNavToggle.addEventListener('click', function() {
+                    const isExpanded = mainNav.classList.toggle('active');
+                    mobileNavToggle.classList.toggle('active');
+                    mobileNavToggle.setAttribute('aria-expanded', isExpanded);
+                    hamburgerIcon.style.display = isExpanded ? 'none' : 'inline';
+                    closeIcon.style.display = isExpanded ? 'inline' : 'none';
+                });
+            }
+            document.addEventListener('click', function(event) {
+                if (mainNav && mainNav.classList.contains('active')) {
+                    const isClickInsideNav = mainNav.contains(event.target);
+                    const isClickOnToggle = mobileNavToggle ? mobileNavToggle.contains(event.target) : false;
+                    if (!isClickInsideNav && !isClickOnToggle) {
+                        mainNav.classList.remove('active');
+                        mobileNavToggle.classList.remove('active');
+                        mobileNavToggle.setAttribute('aria-expanded', 'false');
+                        if (hamburgerIcon && closeIcon) {
+                            hamburgerIcon.style.display = 'inline';
+                            closeIcon.style.display = 'none';
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Verify OTP - CloudKeeper</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #0052CC;
+            --secondary-color: #0065FF;
+            --cta-color: #00A3BF;
+            --text-dark: #172B4D;
+            --text-light: #505F79;
+            --background-light: #F4F5F7;
+            --white: #FFFFFF;
+            --border-color: #DFE1E6;
+            --success-bg: #E3FCEF;
+            --success-text: #006644;
+            --error-bg: #FFEBEE;
+            --error-text: #B00020;
+            --form-label-color: #42526E;
+            --font-family: 'Inter', 'Arial', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-family);
+            line-height: 1.6;
+            color: var(--text-dark);
+            background-color: var(--background-light);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .app-container-centered { /* For centering content like login/signup/verify */
+            max-width: 480px;
+            margin: auto; /* Centers horizontally and vertically with flex on body */
+            padding: 20px;
+            width: 100%;
+        }
+        .auth-header { /* Simplified header for auth pages */
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .auth-logo-text {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: var(--text-dark);
+            text-decoration: none;
+            display: inline-block; /* Allows margin */
+        }
+        .auth-logo-text img {
+            height: 40px; /* Adjust as needed */
+            vertical-align: middle;
+            margin-right: 10px;
+        }
+
+        .auth-card {
+            background-color: var(--white);
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .auth-card-header {
+            background-color: var(--primary-color);
+            color: var(--white);
+            padding: 20px;
+            text-align: center;
+        }
+        .auth-card-header h3 { margin: 0; font-size: 1.5em; font-weight: 600; }
+        .auth-card-body { padding: 30px; }
+
+        .message-placeholder {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            text-align: center;
+        }
+        .message-placeholder.error {
+            background-color: var(--error-bg);
+            color: var(--error-text);
+            border: 1px solid #FFCDD2;
+        }
+         .message-placeholder.info {
+            background-color: #e7f3ff; /* Light blue for info */
+            color: var(--primary-color);
+            border: 1px solid #b3e5fc;
+        }
+
+
+        .form-group { margin-bottom: 20px; }
+        .form-label {
+            display: block; margin-bottom: 8px; font-weight: 500;
+            color: var(--form-label-color); font-size: 0.9em; text-align: left;
+        }
+        .form-control {
+            display: block; width: 100%; padding: 12px 15px; font-size: 1em;
+            color: var(--text-dark); background-color: var(--white);
+            border: 1px solid var(--border-color); border-radius: 6px;
+            transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+        }
+        .form-control:focus {
+            border-color: var(--primary-color); outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 82, 204, 0.25);
+        }
+        .btn-auth-action {
+            background-color: var(--cta-color); color: var(--white); padding: 12px 20px;
+            font-size: 1.1em; font-weight: 600; border: none; border-radius: 6px;
+            width: 100%; cursor: pointer; transition: background-color 0.3s ease;
+            display: inline-flex; align-items: center; justify-content: center;
+        }
+        .btn-auth-action:hover { background-color: #008DAA; }
+        .btn-auth-action i { margin-right: 8px; }
+
+        .auth-links {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        .auth-links a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .auth-links a:hover { text-decoration: underline; }
+
+        .page-footer {
+            text-align: center;
+            padding: 20px 0;
+            margin-top: auto; /* Pushes footer to bottom with flex on body */
+            font-size: 0.85em;
+            color: var(--text-light);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container-centered">
+        <header class="auth-header">
+            <a href="{{ url_for('home_or_main') }}" class="auth-logo-text">
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="CloudKeeper Logo">
+                CloudKeeper
+            </a>
+        </header>
+
+        <div class="auth-card">
+            <div class="auth-card-header">
+                <h3>Verify Your Email</h3>
+            </div>
+            <div class="auth-card-body">
+                {% if error %}
+                    <div class="message-placeholder error">
+                        <p>{{ error }}</p>
+                    </div>
+                {% endif %}
+                <p class="form-label" style="text-align:center; margin-bottom:15px;">
+                    An OTP has been sent to <strong>{{ email or 'your email address' }}</strong>.
+                    Please enter it below to complete your registration.
+                </p>
+
+                <form method="post" action="{{ url_for('verify_otp') }}">
+                    <div class="form-group">
+                        <label for="otp" class="form-label">One-Time Password (OTP)</label>
+                        <input type="text" id="otp" name="otp" class="form-control" placeholder="Enter 6-digit code" required maxlength="6" pattern="\d{6}" title="Please enter a 6-digit OTP">
+                    </div>
+                    <button type="submit" class="btn-auth-action">
+                        <i class="fas fa-check-circle"></i> Verify OTP
+                    </button>
+                </form>
+
+                <div class="auth-links">
+                    <p>Didn't receive OTP? <a href="{{ url_for('signup') }}">Try signing up again</a></p>
+                    <p>Already verified? <a href="{{ url_for('login') }}">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="page-footer">
+        <p>© 2024 CloudKeeper (Team Laadla). All rights reserved.</p>
+    </footer>
+</body>
+</html>

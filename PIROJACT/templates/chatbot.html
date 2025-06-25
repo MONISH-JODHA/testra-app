@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>CloudKeeper Support Assistant</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #0052CC; /* Atlassian Blue */
+            --secondary-color: #0065FF;
+            --cta-color: #00A3BF; /* Teal for positive actions */
+            --research-color: #FF991F; /* Orange for research button */
+            --text-dark: #172B4D; /* Dark text for readability */
+            --text-light: #505F79; /* Lighter text for secondary info */
+            --text-on-primary: #FFFFFF;
+            --background-light: #F4F5F7; /* Light grey background */
+            --white: #FFFFFF;
+            --border-color: #DFE1E6; /* Standard border */
+            --user-message-bg: #DEEBFF; /* Light blue for user */
+            --bot-message-bg: #E9F2FF; 
+            --bot-message-alt-bg: #F4F5F7;
+            --danger-color: #DE350B;
+            --warning-color: #FFAB00;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: var(--font-family);
+            line-height: 1.6;
+            color: var(--text-dark);
+            background-color: var(--background-light);
+            display: flex;
+            flex-direction: column;
+        }
+        .app-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+        /* --- Header Styles --- */
+        .app-header {
+            background-color: var(--white); padding: 12px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            position: fixed; top: 0; left: 0; width: 100%;
+            z-index: 1010; border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0; height: 65px;
+        }
+        .header-content { display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 0 20px; height: 100%;}
+        .app-logo-text { font-size: 1.4em; font-weight: 700; color: var(--text-dark); text-decoration: none; display: flex; align-items: center; }
+        .app-logo-text img { height: 32px; vertical-align: middle; margin-right: 10px;}
+        .main-navigation { display: flex; align-items: center; }
+        .main-navigation .user-actions { display: flex; align-items: center; }
+        .main-navigation .user-actions a {
+            color: var(--text-light); font-weight: 500; margin-left: 10px;
+            text-decoration: none; padding: 8px 14px; border-radius: 6px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            display: inline-flex; align-items: center; font-size: 0.95em;
+        }
+        .main-navigation .user-actions a i { margin-right: 6px; font-size: 0.9em; }
+        .main-navigation .user-actions a:hover { background-color: var(--background-light); color: var(--primary-color); }
+        .main-navigation .user-actions .btn-nav.active-nav { background-color: var(--user-message-bg); color: var(--primary-color); font-weight: 600;}
+        .main-navigation .user-actions .btn-logout { background-color: var(--primary-color); color: var(--white); border: 1px solid var(--primary-color); }
+        .main-navigation .user-actions .btn-logout:hover { background-color: var(--secondary-color); border-color: var(--secondary-color); }
+        .mobile-nav-toggle { display: none; background: none; border: 1px solid var(--border-color); padding: 8px 10px; color: var(--primary-color); font-size: 1.4em; cursor: pointer; border-radius: 6px; line-height: 1; z-index: 1011; }
+        .mobile-nav-toggle:hover { background-color: var(--background-light); }
+        .mobile-nav-toggle .fa-times { display: none; }
+        .mobile-nav-toggle.active .fa-bars { display: none; }
+        .mobile-nav-toggle.active .fa-times { display: inline; }
+
+
+        /* --- Chat Area --- */
+        .chat-container-wrapper {
+            flex-grow: 1; display: flex; justify-content: center; align-items: stretch;
+            padding: 20px; padding-top: calc(65px + 20px);
+            overflow: hidden; width: 100%;
+        }
+        .chat-window {
+            width: 100%; max-width: 800px; height: 100%;
+            background-color: var(--white); border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12); display: flex; flex-direction: column;
+            overflow: hidden; border: 1px solid var(--border-color);
+        }
+        .chat-header {
+            background-color: var(--primary-color); color: var(--text-on-primary);
+            padding: 12px 20px; font-size: 1.1em; font-weight: 600;
+            display: flex; justify-content: space-between; align-items: center;
+            border-top-left-radius: 11px; border-top-right-radius: 11px;
+            flex-shrink: 0;
+        }
+        .chat-mode-toggle { display: flex; align-items: center; font-size: 0.85em; }
+        .chat-mode-toggle label { margin-right: 8px; cursor: pointer; }
+        .chat-mode-toggle input[type="checkbox"] { height: 0; width: 0; visibility: hidden; position: absolute; }
+        .chat-mode-toggle .switch { cursor: pointer; text-indent: -9999px; width: 40px; height: 20px; background: var(--text-light); display: block; border-radius: 100px; position: relative; }
+        .chat-mode-toggle .switch:after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: var(--white); border-radius: 90px; transition: 0.3s; }
+        .chat-mode-toggle input:checked + .switch { background: var(--cta-color); }
+        .chat-mode-toggle input:checked + .switch:after { left: calc(100% - 2px); transform: translateX(-100%); }
+        .chat-mode-status { margin-left: 10px; font-weight: 500; font-size: 0.9em;}
+
+        .chat-messages {
+            flex-grow: 1; padding: 20px; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .message { padding: 10px 15px; border-radius: 18px; max-width: 75%; line-height: 1.5; word-wrap: break-word; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; }
+        .message.user { background-color: var(--user-message-bg); color: var(--text-dark); align-self: flex-end; border-bottom-right-radius: 5px; }
+        .message.bot { background-color: var(--bot-message-bg); color: var(--text-dark); align-self: flex-start; border-bottom-left-radius: 5px; }
+        .message.bot.direct-ai { background-color: var(--bot-message-alt-bg); border-left: 3px solid var(--cta-color); }
+        .message strong { font-weight: 600; }
+        .message pre { white-space: pre-wrap; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; background-color: rgba(0,0,0,0.04); padding: 10px; margin-top: 8px; border-radius: 6px; font-size: 0.9em; overflow-x: auto; border: 1px solid rgba(0,0,0,0.06); }
+        
+        .message .actions-toolbar { /* Container for action buttons like deep research */
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid rgba(0,0,0,0.08);
+            display: flex;
+            gap: 8px;
+        }
+        .message .btn-deep-research {
+            background-color: transparent;
+            color: var(--research-color);
+            border: 1px solid var(--research-color);
+            padding: 4px 10px;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 500;
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .message .btn-deep-research:hover {
+            background-color: var(--research-color);
+            color: var(--white);
+        }
+        .message .btn-deep-research i { margin-right: 5px; }
+
+        .message .docs-section { /* Common styling for both types of docs */
+            margin-top: 10px; padding-top: 10px;
+            border-top: 1px dashed var(--border-color);
+        }
+        .message .docs-section h4 { font-size: 0.9em; color: var(--text-light); margin-bottom: 5px; font-weight: 600; }
+        .message .docs-section ul { list-style: none; padding-left: 0; }
+        .message .docs-section li a { display: flex; align-items:center; padding: 5px 0; font-size: 0.9em; color: var(--primary-color); text-decoration: none; transition: color 0.2s; }
+        .message .docs-section li a:hover { color: var(--secondary-color); text-decoration: underline; }
+        .message .docs-section li a i { margin-right: 8px; width: 16px; text-align: center;} /* Align icons */
+        .message .aws-docs h4 { color: var(--research-color); } /* Differentiate AWS docs header */
+
+
+        .chat-input-area { display: flex; padding: 15px 20px; border-top: 1px solid var(--border-color); background-color: var(--white); flex-shrink: 0; align-items: center; }
+        #userInput { flex-grow: 1; padding: 12px 18px; border: 1px solid var(--border-color); border-radius: 25px; margin-right: 12px; font-size: 1em; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
+        #userInput:focus { border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(0, 82, 204, 0.2); }
+        #sendButton { background-color: var(--cta-color); color: var(--text-on-primary); border: none; padding: 0 22px; height: 46px; border-radius: 25px; cursor: pointer; font-size: 1em; font-weight: 600; display: inline-flex; align-items: center; transition: background-color 0.2s; }
+        #sendButton:hover { background-color: #008DAA; }
+        #sendButton i { margin-left: 8px; }
+        #sendButton:disabled { background-color: #B3BAC5; color: #7A869A; cursor: not-allowed; }
+
+        /* Responsive Adjustments */
+        @media (max-width: 992px) {
+            .mobile-nav-toggle { display: block; }
+            .main-navigation { display: none; flex-direction: column; align-items: stretch; position: absolute; top: calc(100% + 1px); left: 0; right: 0; background-color: var(--white); padding: 10px 0; border-top: 1px solid var(--border-color); box-shadow: 0 5px 10px rgba(0,0,0,0.1); z-index: 1000; max-height: calc(100vh - 65px); overflow-y: auto; transition: transform 0.3s ease-out, opacity 0.3s ease-out; transform: translateY(-10px); opacity: 0; pointer-events: none;}
+            .main-navigation.active { display: flex; transform: translateY(0); opacity: 1; pointer-events: auto; }
+            .main-navigation .user-actions { flex-direction: column; width: 100%; }
+            .main-navigation .user-actions a { margin-left: 0; margin-bottom: 0; padding: 14px 20px; text-align: left; border-radius: 0; border: none; border-bottom: 1px solid var(--background-light); width: 100%;}
+            .main-navigation .user-actions a:last-child { border-bottom: none; }
+            .main-navigation .user-actions a:hover { background-color: var(--primary-color); color: var(--white); }
+            .main-navigation .user-actions .btn-nav.active-nav { background-color: var(--primary-color); color: var(--white); }
+            .main-navigation .user-actions .btn-logout { background-color: var(--danger-color); color: var(--white); border-radius: 0; border-color: var(--danger-color);}
+            .main-navigation .user-actions .btn-logout:hover { background-color: #BF2600; }
+        }
+        @media (max-width: 768px) {
+            .chat-container-wrapper { padding: 10px; padding-top: calc(65px + 10px); }
+            .chat-window { max-width: 100%; border-radius: 8px; }
+            .chat-header { padding: 10px 15px; font-size: 1em; flex-direction: column; gap: 5px; align-items: flex-start;}
+            .chat-mode-toggle { font-size: 0.8em; }
+            .chat-mode-status { font-size: 0.75em; margin-left: 5px; }
+            .chat-messages { padding: 15px; }
+            .message { max-width: 90%; } /* Wider messages on mobile */
+            .chat-input-area { padding: 10px 15px; }
+            #userInput { padding: 10px 15px; font-size: 0.95em; }
+            #sendButton { height: 42px; padding: 0 18px; font-size: 0.95em;}
+            .message .btn-deep-research { font-size: 0.75em; padding: 3px 8px; }
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <a href="{{ url_for('home_or_main') }}" class="app-logo-text">
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="CloudKeeper Logo">
+            </a>
+            <button class="mobile-nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <i class="fas fa-bars" aria-hidden="true"></i>
+                <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+            <nav class="main-navigation" id="mainNav">
+                <div class="user-actions">
+                    <a href="{{ url_for('form') }}" class="btn-nav"><i class="fas fa-plus-circle"></i> New Ticket</a>
+                    <a href="{{ url_for('view_tickets_page') }}" class="btn-nav"><i class="fas fa-list-alt"></i> All Tickets</a>
+                    <a href="{{ url_for('user_ticket_view_page') }}" class="btn-nav"><i class="fas fa-user-tag"></i> My Tickets</a>
+                    <a href="{{ url_for('index_counts_page') }}" class="btn-nav"><i class="fas fa-chart-line"></i> Dashboard</a>
+                    <a href="{{ url_for('gdoc_importer_page') }}" class="btn-nav"><i class="fab fa-google-drive"></i> GDoc Import</a>
+                    <a href="{{ url_for('chatbot_page') }}" class="btn-nav active-nav"><i class="fas fa-robot"></i> Assistant</a>
+                    <a href="{{ url_for('logout') }}" class="btn-logout">Logout <i class="fas fa-sign-out-alt"></i></a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="chat-container-wrapper">
+        <div class="chat-window">
+            <div class="chat-header">
+                <span>CloudKeeper Assistant</span>
+                <div class="chat-mode-toggle">
+                    <label for="aiModeToggle" title="Ticket-specific help">Ticket Help</label>
+                    <input type="checkbox" id="aiModeToggle">
+                    <label for="aiModeToggle" class="switch" title="Toggle for General AI assistance"></label>
+                    <label for="aiModeToggle" title="General AI assistance">General AI</label>
+                    <span class="chat-mode-status" id="chatModeStatusText">(Ticket Focused)</span>
+                </div>
+            </div>
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    Hello {{ username }}! I'm the CloudKeeper Assistant.
+                    In "Ticket Help" mode, I can assist with your tickets (e.g., "show ticket 123", "my open tickets").
+                    Toggle to "General AI" for broader queries.
+                </div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="userInput" placeholder="Ask about tickets or toggle for general AI..." autocomplete="off">
+                <button id="sendButton" title="Send Message">Send <i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const chatMessagesEl = document.getElementById('chatMessages');
+        const userInputEl = document.getElementById('userInput');
+        const sendButtonEl = document.getElementById('sendButton');
+        const aiModeToggleEl = document.getElementById('aiModeToggle');
+        const chatModeStatusTextEl = document.getElementById('chatModeStatusText');
+
+        let currentChatMode = 'ticket_assistant'; 
+        let lastBotQueryContext = null; 
+
+        function updateChatModeStatus() {
+            if (aiModeToggleEl.checked) {
+                currentChatMode = 'general_ai';
+                chatModeStatusTextEl.textContent = '(General AI)';
+                userInputEl.placeholder = 'Ask me anything...';
+                addMessageToChat("Switched to General AI mode. How can I help you with general queries?", 'system-notification');
+            } else {
+                currentChatMode = 'ticket_assistant';
+                chatModeStatusTextEl.textContent = '(Ticket Focused)';
+                userInputEl.placeholder = 'Ask about tickets...';
+                addMessageToChat("Switched to Ticket Assistant mode. Ask about your tickets.", 'system-notification');
+            }
+            lastBotQueryContext = null; 
+        }
+        
+        aiModeToggleEl.addEventListener('change', updateChatModeStatus);
+
+                function formatBotMessage(text) {
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            const codeBlockRegex = /```([\s\S]*?)```/g;
+            text = text.replace(codeBlockRegex, (match, codeContent) => {
+                const escapedCode = codeContent
+                    .replace(/&/g, "&")  
+                    .replace(/</g, "<")   
+                    .replace(/>/g, ">")   
+                    .replace(/"/g, '"') 
+                    .replace(/'/g, "'"); 
+                return `<pre><code>${escapedCode.trim()}</code></pre>`;
+            });
+            return text;
+        }
+
+        function addMessageToChat(text, sender, relevantDocs = null, awsDocs = null, isDirectAiResponse = false, queryContextForResearch = null) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+
+            if (sender === 'system-notification') {
+                messageDiv.style.textAlign = 'center';
+                messageDiv.style.fontSize = '0.85em';
+                messageDiv.style.color = 'var(--text-light)';
+                messageDiv.style.fontStyle = 'italic';
+                messageDiv.style.background = 'none';
+                messageDiv.style.boxShadow = 'none';
+            }
+            
+            if (isDirectAiResponse && sender === 'bot') {
+                messageDiv.classList.add('direct-ai');
+            }
+
+            const formattedText = (sender === 'bot' || sender === 'system-notification') ? formatBotMessage(text) : text;
+            const contentSpan = document.createElement('span');
+            contentSpan.innerHTML = formattedText;
+            messageDiv.appendChild(contentSpan);
+
+            if (relevantDocs && relevantDocs.length > 0) {
+                const docsDiv = document.createElement('div');
+                docsDiv.className = 'docs-section relevant-docs'; 
+                const docsHeader = document.createElement('h4');
+                docsHeader.innerHTML = '<i class="fas fa-folder-open"></i> Related Ticket Documents:';
+                docsDiv.appendChild(docsHeader);
+                const ul = document.createElement('ul');
+                relevantDocs.forEach(doc => {
+                    const li = document.createElement('li');
+                    const a = document.createElement('a');
+                    a.href = doc.url; 
+                    a.textContent = doc.name;
+                    a.target = '_blank';
+                    const icon = document.createElement('i');
+                    icon.className = doc.type === 'remedy_document' ? 'fas fa-file-medical' : 'fas fa-paperclip';
+                    a.prepend(icon);
+                    li.appendChild(a);
+                    ul.appendChild(li);
+                });
+                docsDiv.appendChild(ul);
+                messageDiv.appendChild(docsDiv);
+            }
+
+            if (awsDocs && awsDocs.length > 0) {
+                const awsDocsDiv = document.createElement('div');
+                awsDocsDiv.className = 'docs-section aws-docs';
+                const awsDocsHeader = document.createElement('h4');
+                awsDocsHeader.innerHTML = '<i class="fab fa-aws"></i> AWS Documentation:';
+                awsDocsDiv.appendChild(awsDocsHeader);
+                const ulAws = document.createElement('ul');
+                awsDocs.forEach(doc => {
+                    const li = document.createElement('li');
+                    const a = document.createElement('a');
+                    a.href = doc.url;
+                    a.textContent = doc.title || doc.name; 
+                    a.target = '_blank';
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-book-open';
+                    a.prepend(icon);
+                    li.appendChild(a);
+                    ulAws.appendChild(li);
+                });
+                awsDocsDiv.appendChild(ulAws);
+                messageDiv.appendChild(awsDocsDiv);
+            }
+            
+            if (sender === 'bot' && !awsDocs && queryContextForResearch && currentChatMode === 'ticket_assistant') { 
+                const actionsToolbar = document.createElement('div');
+                actionsToolbar.className = 'actions-toolbar';
+                
+                const researchButton = document.createElement('button');
+                researchButton.className = 'btn-deep-research';
+                researchButton.innerHTML = '<i class="fas fa-search-plus"></i> Deep Research AWS Docs';
+                researchButton.title = 'Find relevant AWS documentation for this topic';
+                researchButton.onclick = () => {
+                    fetchAwsDocumentation(queryContextForResearch, messageDiv);
+                };
+                actionsToolbar.appendChild(researchButton);
+                messageDiv.appendChild(actionsToolbar);
+            }
+
+
+            chatMessagesEl.appendChild(messageDiv);
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+        }
+
+        async function fetchAwsDocumentation(topic, originalMessageDiv) {
+            addMessageToChat(`Looking for AWS documentation related to: "${topic}"...`, 'system-notification');
+            const loadingIndicatorId = `loading-${Date.now()}`;
+            const loadingDiv = document.createElement('div');
+            loadingDiv.id = loadingIndicatorId;
+            loadingDiv.className = 'message bot'; 
+            loadingDiv.innerHTML = '<span><i class="fas fa-spinner fa-spin"></i> Fetching AWS documentation...</span>';
+            chatMessagesEl.appendChild(loadingDiv); 
+            chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+
+            try {
+                const payload = {
+                    research_topic: topic,
+                };
+                const response = await fetch("{{ url_for('aws_doc_search_api') }}", { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', },
+                    body: JSON.stringify(payload),
+                });
+                document.getElementById(loadingIndicatorId)?.remove(); 
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || `Server error: ${response.status}`);
+                }
+
+                if (data.aws_docs && data.aws_docs.length > 0) {
+                    const awsDocsDiv = document.createElement('div');
+                    awsDocsDiv.className = 'docs-section aws-docs';
+                    const awsDocsHeader = document.createElement('h4');
+                    awsDocsHeader.innerHTML = '<i class="fab fa-aws"></i> AWS Documentation Found:';
+                    awsDocsDiv.appendChild(awsDocsHeader);
+                    const ulAws = document.createElement('ul');
+                    data.aws_docs.forEach(doc => {
+                        const li = document.createElement('li');
+                        const a = document.createElement('a');
+                        a.href = doc.url;
+                        a.textContent = doc.title || doc.name;
+                        a.target = '_blank';
+                        const icon = document.createElement('i');
+                        icon.className = 'fas fa-book-open';
+                        a.prepend(icon);
+                        li.appendChild(a);
+                        ulAws.appendChild(li);
+                    });
+                    awsDocsDiv.appendChild(ulAws);
+                    
+                    if (originalMessageDiv) {
+                         originalMessageDiv.querySelector('.actions-toolbar')?.remove(); 
+                         originalMessageDiv.appendChild(awsDocsDiv);
+                    } else { 
+                        addMessageToChat("Found AWS Docs (appended separately):", 'bot', null, data.aws_docs);
+                    }
+
+                } else {
+                    addMessageToChat(`No specific AWS documentation found for "${topic}".`, 'bot');
+                }
+
+            } catch (error) {
+                console.error("AWS Doc Search API error:", error);
+                document.getElementById(loadingIndicatorId)?.remove();
+                addMessageToChat(`Sorry, I encountered an error while searching AWS docs: ${error.message}`, 'bot');
+            }
+        }
+
+
+        async function sendMessageToBot() {
+            console.log("1. sendMessageToBot called"); // <<<< ADD THIS
+            const messageText = userInputEl.value.trim();
+            console.log("2. messageText:", messageText); // <<<< ADD THIS
+
+            if (!messageText) {
+                console.log("3. No messageText, returning."); // <<<< ADD THIS
+                return;
+            }
+
+            addMessageToChat(messageText, 'user');
+            userInputEl.value = '';
+            const originalButtonText = sendButtonEl.innerHTML;
+            sendButtonEl.disabled = true;
+            sendButtonEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+            
+            lastBotQueryContext = messageText; 
+            console.log("4. lastBotQueryContext set to:", lastBotQueryContext); 
+
+            try {
+                const payload = {
+                    message: messageText,
+                    mode: currentChatMode 
+                };
+                console.log("5. Payload to send:", payload); 
+                console.log("6. Fetching URL:", "{{ url_for('chat_api') }}"); 
+
+                const response = await fetch("{{ url_for('chat_api') }}", {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', },
+                    body: JSON.stringify(payload),
+                });
+                
+                console.log("7. Response received, status:", response.status); 
+                const data = await response.json(); 
+                console.log("8. Data parsed from JSON:", data); 
+
+                if (!response.ok) {
+                    console.error("9. Response not OK:", response.statusText, data); 
+                    throw new Error(data.reply || data.error || `Server error: ${response.status} ${response.statusText}`);
+                }
+                
+                let researchContext = data.research_topic_suggestion || messageText;
+                console.log("10. Research context for addMessageToChat:", researchContext);
+
+                addMessageToChat(data.reply, 'bot', data.relevant_docs, data.aws_docs, data.is_direct_ai, researchContext);
+
+            } catch (error) {
+                console.error("11. Catch block error in sendMessageToBot:", error); 
+                addMessageToChat(`Sorry, I encountered an error: ${error.message || 'Unable to connect to the assistant.'}`, 'bot');
+            } finally {
+                console.log("12. Finally block in sendMessageToBot"); 
+                sendButtonEl.disabled = false;
+                sendButtonEl.innerHTML = originalButtonText;
+                userInputEl.focus();
+            }
+        }
+
+        sendButtonEl.addEventListener('click', sendMessageToBot);
+        userInputEl.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessageToBot();
+            }
+        });
+        userInputEl.focus();
+
+        const mobileNavToggle = document.querySelector('.mobile-nav-toggle');
+        const mainNav = document.getElementById('mainNav');
+        const hamburgerIcon = mobileNavToggle ? mobileNavToggle.querySelector('.fa-bars') : null;
+        const closeIcon = mobileNavToggle ? mobileNavToggle.querySelector('.fa-times') : null;
+
+        if (mobileNavToggle && mainNav && hamburgerIcon && closeIcon) {
+            mobileNavToggle.addEventListener('click', function() {
+                const isExpanded = mainNav.classList.toggle('active');
+                mobileNavToggle.classList.toggle('active');
+                mobileNavToggle.setAttribute('aria-expanded', isExpanded);
+                hamburgerIcon.style.display = isExpanded ? 'none' : 'inline';
+                closeIcon.style.display = isExpanded ? 'inline' : 'none';
+            });
+            document.addEventListener('click', function(event) {
+                if (mainNav.classList.contains('active')) {
+                    const isClickInsideNav = mainNav.contains(event.target);
+                    const isClickOnToggle = mobileNavToggle.contains(event.target);
+                    if (!isClickInsideNav && !isClickOnToggle) {
+                        mainNav.classList.remove('active');
+                        mobileNavToggle.classList.remove('active');
+                        mobileNavToggle.setAttribute('aria-expanded', 'false');
+                        hamburgerIcon.style.display = 'inline';
+                        closeIcon.style.display = 'none';
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

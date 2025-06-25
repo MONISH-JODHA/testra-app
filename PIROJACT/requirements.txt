@@ -1,0 +1,10 @@
+Flask
+Flask-CORS
+Werkzeug
+google-generativeai
+requests
+beautifulsoup4
+python-dotenv
+Flask-SocketIO
+eventlet  # Or gevent, if you choose that for Flask-SocketIO
+gunicorn # Optional: if you use Gunicorn to run your app

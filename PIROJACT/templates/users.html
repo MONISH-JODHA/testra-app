@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tickets by User - CloudKeeper Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #0052CC;
+            --secondary-color: #0065FF;
+            --cta-color: #00A3BF;
+            --text-dark: #172B4D;
+            --text-light: #505F79;
+            --background-light: #F4F5F7;
+            --white: #FFFFFF;
+            --border-color: #DFE1E6;
+            --success-bg: #E3FCEF;
+            --success-text: #006644;
+            --info-bg: #DEEBFF;
+            --info-text: #0052CC;
+            --warning-bg: #FFFAE6;
+            --warning-text: #FF8B00;
+            --error-bg: #FFEBEE;
+            --error-text: #B00020;
+            --font-family: 'Inter', 'Arial', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: var(--font-family);
+            line-height: 1.6;
+            color: var(--text-dark);
+            background-color: var(--background-light);
+            padding-top: 65px;
+        }
+        .app-container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+        .app-header {
+            background-color: var(--white); padding: 12px 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            position: fixed; top: 0; left: 0; width: 100%;
+            z-index: 1010; border-bottom: 1px solid var(--border-color);
+        }
+        .header-content {
+            display: flex; justify-content: space-between; align-items: center;
+            max-width: 1200px; margin: 0 auto; padding: 0 20px;
+        }
+        .app-logo-text {
+            font-size: 1.4em; font-weight: 700; color: var(--text-dark);
+            text-decoration: none; display: flex; align-items: center;
+        }
+        .app-logo-text img { height: 32px; vertical-align: middle; margin-right: 10px;}
+
+        .main-navigation { display: flex; align-items: center; }
+        .main-navigation .user-actions { display: flex; align-items: center; }
+        .main-navigation .user-actions a {
+            color: var(--text-light); font-weight: 500; margin-left: 10px;
+            text-decoration: none; padding: 8px 14px; border-radius: 6px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+            display: inline-flex; align-items: center; font-size: 0.95em;
+        }
+        .main-navigation .user-actions a i { margin-right: 6px; font-size: 0.9em; }
+        .main-navigation .user-actions a:hover { background-color: var(--background-light); color: var(--primary-color); }
+        .main-navigation .user-actions .btn-nav { border: 1px solid transparent; }
+        .main-navigation .user-actions .btn-nav:hover { border-color: var(--primary-color); }
+        .main-navigation .user-actions .btn-logout {
+            background-color: var(--primary-color); color: var(--white); border: 1px solid var(--primary-color);
+        }
+        .main-navigation .user-actions .btn-logout:hover { background-color: var(--secondary-color); border-color: var(--secondary-color); }
+
+        .mobile-nav-toggle {
+            display: none; background: none; border: 1px solid var(--border-color);
+            padding: 8px 10px; color: var(--primary-color); font-size: 1.4em;
+            cursor: pointer; border-radius: 6px; line-height: 1; z-index: 1011;
+        }
+        .mobile-nav-toggle:hover { background-color: var(--background-light); }
+        .mobile-nav-toggle .fa-times { display: none; }
+        .mobile-nav-toggle.active .fa-bars { display: none; }
+        .mobile-nav-toggle.active .fa-times { display: inline; }
+
+        .main-content { padding: 30px 0; }
+        .page-title { font-size: 2em; font-weight: 600; color: var(--text-dark); margin-bottom: 30px; }
+        .dashboard-layout { display: flex; gap: 30px; align-items: flex-start;}
+        .user-sidebar {
+            flex: 0 0 280px; background-color: var(--white); padding: 20px;
+            border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            height: fit-content; max-height: 75vh; overflow-y: auto;
+        }
+        .sidebar-title {
+            font-size: 1.2em; font-weight: 600; color: var(--text-dark);
+            margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color);
+        }
+        #userList { list-style: none; padding: 0; }
+        .user-item {
+            padding: 12px 15px; margin-bottom: 5px; border-radius: 6px;
+            cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease;
+            color: var(--text-light); font-weight: 500; word-break: break-all;
+        }
+        .user-item:hover { background-color: var(--primary-color); color: var(--white); }
+        .user-item.active { background-color: var(--primary-color); color: var(--white); font-weight: 600; }
+
+        .ticket-panel { flex: 1; }
+        .ticket-table-wrapper, .ticket-details-card {
+            background-color: var(--white); padding: 20px;
+            border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .ticket-table-wrapper { margin-bottom: 30px; overflow-x: auto; }
+        .panel-subtitle { font-size: 1.3em; font-weight: 600; margin-bottom: 20px; color: var(--text-dark); }
+        .styled-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        .styled-table th, .styled-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); white-space: nowrap;}
+        .styled-table td:nth-child(2) { white-space: normal; }
+        .styled-table thead th {
+            background-color: var(--success-bg); color: var(--success-text);
+            font-weight: 600; font-size: 0.9em; text-transform: uppercase;
+            letter-spacing: 0.5px; border-bottom: 2px solid var(--primary-color);
+        }
+        .styled-table tbody tr { cursor: pointer; }
+        .styled-table tbody tr:hover { background-color: #f9fafb; }
+        .styled-table tbody tr.active-ticket-row { background-color: var(--info-bg); font-weight: 500; }
+        .d-none { display: none !important; }
+
+        .ticket-details-card { border: 1px solid var(--border-color); border-radius: 8px; }
+        .ticket-details-card .card-header {
+            background-color: var(--info-bg); color: var(--info-text);
+            padding: 15px 20px; border-bottom: 1px solid var(--border-color);
+            border-top-left-radius: inherit; border-top-right-radius: inherit;
+        }
+        .ticket-details-card .card-header h5 { margin: 0; font-size: 1.3em; font-weight: 600; }
+        .ticket-details-card .card-body { padding: 20px; }
+        .detail-item { display: flex; margin-bottom: 12px; align-items: flex-start;}
+        .detail-item strong {
+            color: var(--text-dark); min-width: 130px;
+            font-weight: 600; padding-right: 10px; line-height:1.6;
+        }
+        .detail-item span, .detail-item input, .detail-item textarea, .detail-item select {
+            flex-grow: 1; color: var(--text-light);
+            word-break: break-word; white-space: pre-wrap;
+        }
+        .form-control-display {
+            background-color: transparent; border: none; padding: 0;
+            font-size: inherit; color: var(--text-light); width: 100%;
+            cursor: default; line-height: 1.6;
+        }
+        .form-control-editable {
+             display: block; width: 100%; padding: 8px 12px; font-size: 1em;
+            color: var(--text-dark); background-color: var(--white);
+            border: 1px solid var(--border-color); border-radius: 6px;
+        }
+        .form-control-editable:focus {
+            border-color: var(--primary-color); outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 82, 204, 0.25);
+        }
+        #screenshotContainerUser, #remedyDocLinkContainerUsers { margin-top: 5px; }
+        .screenshot-img, .remedy-doc-link {
+            border: 1px solid var(--border-color); border-radius: 4px;
+            object-fit: cover; margin: 5px;
+        }
+        .screenshot-img { max-width: 180px; max-height: 120px; cursor: pointer; transition: transform 0.2s ease-in-out;}
+        .screenshot-img:hover { transform: scale(1.05); }
+        .remedy-doc-link {
+            display: inline-block; padding: 8px 12px;
+            background-color: var(--background-light);
+            color: var(--primary-color); text-decoration: none; font-size: 0.9em;
+        }
+        .remedy-doc-link:hover { background-color: var(--border-color); }
+        .text-muted { color: var(--text-light); opacity: 0.8; font-style: italic;}
+        .btn-action {
+            padding: 8px 15px; border-radius: 6px; font-weight: 500;
+            border: none; cursor: pointer; margin-left: 10px;
+            transition: background-color 0.2s ease; display: inline-flex; align-items:center;
+        }
+        .btn-action i { margin-right: 5px;}
+        .btn-edit { background-color: var(--warning-bg); color: var(--warning-text); border: 1px solid var(--warning-text); }
+        .btn-edit:hover { background-color: var(--warning-text); color: var(--white); }
+        .btn-save { background-color: var(--success-bg); color: var(--success-text); border: 1px solid var(--success-text); }
+        .btn-save:hover { background-color: var(--success-text); color: var(--white); }
+        .btn-cancel { background-color: #f8f9fa; color: var(--text-light); border: 1px solid var(--border-color); }
+        .btn-cancel:hover { background-color: var(--border-color); }
+
+        #statusMessagesUsers { margin-bottom: 15px; }
+        .alert {
+            padding: .75rem 1.25rem; margin-bottom: 1rem; border: 1px solid transparent;
+            border-radius: .25rem; text-align: center; font-size: 0.95em;
+        }
+        .alert-danger { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
+        .alert-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
+        .alert-info { color: #055160; background-color: #cff4fc; border-color: #b6effb; }
+
+        #toastNotifications {
+            position: fixed; top: 80px; right: 20px; z-index: 1005;
+            display: flex; flex-direction: column; gap: 10px;
+        }
+        .toast-message {
+            background-color: var(--success-bg); color: var(--success-text);
+            padding: 15px 20px; border-radius: 6px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+            min-width: 280px; max-width: 400px;
+            opacity: 1;
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+            transform: translateX(0); font-size: 0.95em;
+        }
+        .toast-message.error { background-color: var(--error-bg); color: var(--error-text); }
+        .toast-message.info { background-color: var(--info-bg); color: var(--info-text); }
+        .toast-message.hide { opacity: 0; transform: translateX(110%); }
+
+        .image-popup-modal {
+            display: none; position: fixed; z-index: 1050;
+            padding-top: 50px; left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.85); text-align: center;
+        }
+        .image-popup-content {
+            margin: auto; display: block; max-width: 90%; max-height: 85vh;
+            border-radius: 4px; animation-name: zoomInUserPage; animation-duration: 0.4s;
+        }
+        @keyframes zoomInUserPage { from {transform:scale(0.5); opacity: 0;} to {transform:scale(1); opacity: 1;} }
+        .image-popup-close {
+            position: absolute; top: 15px; right: 35px; color: #f1f1f1;
+            font-size: 40px; font-weight: bold; transition: 0.3s; cursor: pointer;
+        }
+        .image-popup-close:hover, .image-popup-close:focus { color: #bbb; text-decoration: none; cursor: pointer; }
+        #imagePopupCaptionUser { /* Unique ID for caption */
+            margin: 15px auto; display: block; width: 80%; max-width: 700px;
+            text-align: center; color: #ccc; padding: 10px 0; font-size: 0.9em;
+        }
+
+        .app-footer {
+            text-align: center; padding: 20px 0; margin-top: 30px;
+            font-size: 0.9em; color: var(--text-light); border-top: 1px solid var(--border-color);
+        }
+
+        @media (max-width: 992px) {
+            .mobile-nav-toggle { display: block; }
+            .main-navigation {
+                display: none; flex-direction: column; align-items: stretch;
+                position: absolute; top: calc(100% + 1px);
+                left: 0; right: 0;
+                background-color: var(--white); padding: 10px 0;
+                border-top: 1px solid var(--border-color);
+                box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+                z-index: 1000; max-height: calc(100vh - 65px); overflow-y: auto;
+                transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+                transform: translateY(-10px); opacity: 0; pointer-events: none;
+            }
+            .main-navigation.active { display: flex; transform: translateY(0); opacity: 1; pointer-events: auto; }
+            .main-navigation .user-actions { flex-direction: column; width: 100%; }
+            .main-navigation .user-actions a {
+                margin-left: 0; margin-bottom: 0; padding: 14px 20px;
+                text-align: left; border-radius: 0; border: none;
+                border-bottom: 1px solid var(--background-light); width: 100%;
+            }
+            .main-navigation .user-actions a:last-child { border-bottom: none; }
+            .main-navigation .user-actions a:hover { background-color: var(--primary-color); color: var(--white); }
+            .main-navigation .user-actions .btn-logout { background-color: var(--primary-color); color: var(--white); border-radius: 0; }
+            .main-navigation .user-actions .btn-logout:hover { background-color: var(--secondary-color); }
+
+            .dashboard-layout { flex-direction: column; }
+            .user-sidebar { flex: 1 1 auto; max-height: 300px; margin-bottom: 20px; }
+            .ticket-panel { flex: 1 1 auto; }
+        }
+
+        @media (max-width: 768px) {
+            body { padding-top: 58px; }
+            .page-title { font-size: 1.6em; margin-bottom: 20px; }
+            .main-content { padding: 20px 15px; }
+            .user-sidebar { padding: 15px; }
+            .sidebar-title { font-size: 1.1em; }
+            .user-item { padding: 10px 12px; font-size: 0.95em; }
+            .ticket-table-wrapper, .ticket-details-card { padding: 15px; }
+            .panel-subtitle { font-size: 1.15em; }
+            .styled-table th, .styled-table td { padding: 8px 10px; font-size: 0.9em; white-space: normal;}
+            .styled-table {min-width: auto;}
+            .ticket-details-card .card-header h5 { font-size: 1.1em; }
+            .ticket-details-card .card-body { padding: 15px; }
+            .detail-item { flex-direction: column; align-items: flex-start; margin-bottom: 10px; }
+            .detail-item strong { min-width: auto; margin-bottom: 3px; padding-right: 0; }
+            .btn-action { padding: 6px 10px; font-size: 0.9em; margin-left: 5px; }
+            .screenshot-img { max-width: 100px; max-height: 70px; }
+            .image-popup-content { max-width: 95%; }
+            .image-popup-close { top: 10px; right: 20px; font-size: 30px; }
+        }
+        @media (max-width: 576px) {
+            #toastNotifications { top: 70px; right: 10px; left: 10px; align-items: center; }
+            .toast-message { min-width: auto; width: calc(100% - 20px); font-size: 0.9em; }
+            .user-actions a { padding: 10px 15px; }
+            .app-logo-text { font-size: 1.2em; }
+            .app-logo-text img { height: 28px; }
+            .mobile-nav-toggle { font-size: 1.2em; padding: 6px 8px;}
+        }
+    </style>
+</head>
+<body>
+    <header class="app-header">
+        <div class="header-content">
+            <a href="{{ url_for('home_or_main') }}" class="app-logo-text">
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="CloudKeeper Logo">
+            </a>
+            <button class="mobile-nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+                <i class="fas fa-bars" aria-hidden="true"></i>
+                <i class="fas fa-times" aria-hidden="true" style="display:none;"></i>
+            </button>
+            <nav class="main-navigation" id="mainNav">
+                <div class="user-actions">
+                    <a href="{{ url_for('form') }}" class="btn-nav"><i class="fas fa-plus-circle"></i> New Ticket</a>
+                    <a href="{{ url_for('view_tickets_page') }}" class="btn-nav"><i class="fas fa-list-alt"></i> All Tickets</a>
+                    <a href="{{ url_for('user_ticket_view_page') }}" class="btn-nav"><i class="fas fa-user-tag"></i> Tickets by User</a>
+                    <a href="{{ url_for('index_counts_page') }}" class="btn-nav"><i class="fas fa-chart-bar"></i> User Counts</a>
+                    <a href="{{ url_for('gdoc_importer_page') }}" class="btn-nav"><i class="fab fa-google-drive"></i> Import GDoc</a>
+                    <a href="{{ url_for('chatbot_page') }}" class="btn-nav"><i class="fas fa-comments"></i> Chat Assistant</a>
+                    <a href="{{ url_for('logout') }}" class="btn-logout">Logout <i class="fas fa-sign-out-alt"></i></a>
+                </div>
+            </nav>
+        </div>
+    </header>
+    <div id="toastNotifications"></div>
+
+    <main class="main-content">
+        <div class="app-container">
+            <h1 class="page-title">Tickets by User</h1>
+            <div id="statusMessagesUsers"></div>
+
+            <div class="dashboard-layout">
+                <aside class="user-sidebar">
+                    <h3 class="sidebar-title">Users</h3>
+                    <div id="userList">
+                        <p class="text-muted p-2">Loading users...</p>
+                    </div>
+                </aside>
+
+                <section class="ticket-panel">
+                    <div class="ticket-table-wrapper">
+                        <h4 id="selectedUserTitle" class="panel-subtitle">Select a user to view their tickets</h4>
+                        <table class="styled-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Title</th>
+                                    <th>Date Submitted</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTicketTableBody">
+                                <tr><td colspan="4" style="text-align:center; padding: 20px; color: var(--text-light);">Please select a user from the sidebar.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div id="ticketDetailsUser" class="ticket-details-card d-none mt-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 id="detailTicketIdHeaderUser">Ticket #<span id="detailTicketIdUser"></span></h5>
+                            <div>
+                                <button id="editBtnUsers" onclick="enableEditModeUsers()" class="btn-action btn-edit"><i class="fas fa-edit"></i> Edit</button>
+                                <button id="saveBtnUsers" onclick="saveTicketChangesUsers()" class="btn-action btn-save d-none"><i class="fas fa-save"></i> Save</button>
+                                <button id="cancelBtnUsers" onclick="cancelEditModeUsers()" class="btn-action btn-cancel d-none"><i class="fas fa-times"></i> Cancel</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <input type="hidden" id="currentTicketIdUser">
+                            <div class="detail-item">
+                                <strong>Title:</strong>
+                                <input type="text" id="detailTitleUser" class="form-control-display" readonly>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Description:</strong>
+                                <textarea id="detailDescriptionUser" class="form-control-display" rows="4" readonly></textarea>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Remedies / Steps:</strong>
+                                <textarea id="detailRemediesUser" class="form-control-display" rows="3" readonly></textarea>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Status:</strong>
+                                <select id="detailStatusUser" class="form-control-display" disabled>
+                                    <option value="Open">Open</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Resolved">Resolved</option>
+                                    <option value="Closed">Closed</option>
+                                    <option value="Pending User">Pending User</option>
+                                </select>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Submitted By:</strong>
+                                <span id="detailCreatedByUser" class="form-control-display"></span>
+                            </div>
+                            <div class="detail-item">
+                                <strong>Date Submitted:</strong>
+                                <span id="detailCreatedAtUser" class="form-control-display"></span>
+                            </div>
+                            <div id="remedyDocContainerUsers" class="detail-item">
+                                <strong>Remedy Document:</strong>
+                                <span id="remedyDocLinkContainerUsers">No document attached.</span>
+                            </div>
+                            <div class="detail-item" style="flex-direction: column; align-items: flex-start;">
+                                <strong style="min-width:auto; margin-bottom: 5px;">Screenshots:</strong>
+                                <div id="screenshotContainerUser" class="d-flex flex-wrap">
+                                    No screenshots attached.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <footer class="app-footer">
+        <p>© 2025 CloudKeeper (Team Laadle). All rights reserved.</p>
+    </footer>
+
+    <div id="imageModalUser" class="image-popup-modal d-none">
+        <span class="image-popup-close" onclick="closeImageModalUsers()">×</span>
+        <img class="image-popup-content" id="modalImageSrcUser" alt="Popup image">
+        <div id="imagePopupCaptionUser"></div>
+    </div>
+
+  <script>
+    const loggedInUserForUserPage = "{{ username }}";
+    const userListEl = document.getElementById('userList');
+    const ticketTableBodyEl = document.getElementById('userTicketTableBody');
+    const detailSectionEl = document.getElementById('ticketDetailsUser');
+    const selectedUserTitleEl = document.getElementById('selectedUserTitle');
+    let currentSelectedUserItem = null;
+    let currentSelectedTicketRow = null;
+    let originalTicketDataForUserPage = {};
+
+    const imageModalUser = document.getElementById('imageModalUser');
+    const modalImageSrcUser = document.getElementById('modalImageSrcUser');
+    const imagePopupCaptionUser = document.getElementById('imagePopupCaptionUser');
+
+    function openImageModalUsers(imageSrc, captionText = '') {
+        if (imageModalUser && modalImageSrcUser) {
+            imageModalUser.style.display = "block";
+            modalImageSrcUser.src = imageSrc;
+            if (imagePopupCaptionUser) {
+                imagePopupCaptionUser.textContent = captionText || (imageSrc.split('/').pop());
+            }
+            document.body.style.overflow = 'hidden';
+        }
+    }
+    function closeImageModalUsers() {
+        if (imageModalUser) {
+            imageModalUser.style.display = "none";
+            document.body.style.overflow = 'auto';
+        }
+    }
+    if (imageModalUser) {
+        imageModalUser.onclick = function(event) {
+            if (event.target === imageModalUser) closeImageModalUsers();
+        }
+    }
+    document.addEventListener('keydown', function(event) {
+        if (event.key === "Escape" && imageModalUser && imageModalUser.style.display === "block") {
+            closeImageModalUsers();
+        }
+    });
+
+
+    const socket = io();
+    socket.on('connect', () => { console.log('Socket.IO connected (Tickets by User Page)!'); });
+    socket.on('disconnect', () => { console.log('Socket.IO disconnected (Tickets by User Page).'); });
+
+    socket.on('new_ticket_notification', function(data) {
+        console.log('New ticket notification on User Tickets page:', data);
+        showToastNotificationUsers(data.message, 'info');
+        if (currentSelectedUserItem && currentSelectedUserItem.textContent === data.created_by) {
+            loadTicketsForUser(data.created_by);
+        }
+        // Potentially refresh user list if a new user submitted a ticket
+        // For now, this requires a page reload or a more complex user list update
+    });
+
+    socket.on('ticket_updated_globally', function(data) {
+        console.log('Global ticket update on User Tickets page:', data);
+        if (currentSelectedUserItem && currentSelectedUserItem.textContent === data.created_by) {
+            showToastNotificationUsers(data.message || `Ticket #${data.id} was updated.`, 'info');
+            loadTicketsForUser(data.created_by);
+            const currentDetailId = document.getElementById('currentTicketIdUser').value;
+            if (currentDetailId && parseInt(currentDetailId) === data.id) {
+                showDetailsForUserPage(data.id);
+            }
+        }
+    });
+    
+    socket.on('ticket_update_notification', function(data){
+        if(originalTicketDataForUserPage && originalTicketDataForUserPage.created_by === loggedInUserForUserPage && 
+           data.id === originalTicketDataForUserPage.id && data.updated_by !== loggedInUserForUserPage){
+             showToastNotificationUsers(data.message, 'info');
+        }
+    });
+
+    function showToastNotificationUsers(message, type = 'success') {
+        const toastContainer = document.getElementById('toastNotifications');
+        if (!toastContainer) {
+            console.warn("Toast container not found, falling back to alert.");
+            alert(message); return;
+        }
+        const toast = document.createElement('div');
+        toast.className = `toast-message ${type}`;
+        toast.textContent = message;
+        toastContainer.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => { toast.remove(); }, 500);
+        }, 5000);
+    }
+
+    async function loadUsers() {
+      try {
+        const res = await fetch("{{ url_for('get_users_list') }}");
+        if (!res.ok) throw new Error(`HTTP error ${res.status} while fetching users`);
+        const users = await res.json();
+        userListEl.innerHTML = '';
+        if (users.length === 0) {
+            userListEl.innerHTML = '<p class="text-muted" style="padding:10px;">No users found with tickets.</p>';
+            return;
+        }
+        users.forEach(user => {
+          const div = document.createElement('div');
+          div.textContent = user;
+          div.classList.add('user-item');
+          div.onclick = () => {
+            if (currentSelectedUserItem) currentSelectedUserItem.classList.remove('active');
+            div.classList.add('active');
+            currentSelectedUserItem = div;
+            loadTicketsForUser(user);
+          };
+          userListEl.appendChild(div);
+        });
+        checkUrlFragmentForUser();
+      } catch (error) {
+        console.error("Failed to load users:", error);
+        displayStatusMessageUsers(`Error loading users: ${error.message}`, 'danger');
+      }
+    }
+
+    async function loadTicketsForUser(username) {
+      try {
+        selectedUserTitleEl.textContent = `Tickets for: ${username}`;
+        const fetchUrl = `{{ url_for('get_tickets_for_user_api', username='__USERNAME__') }}`.replace('__USERNAME__', encodeURIComponent(username));
+        const res = await fetch(fetchUrl);
+        if (!res.ok) throw new Error(`HTTP error ${res.status} while fetching tickets for ${username}`);
+        const tickets = await res.json();
+        ticketTableBodyEl.innerHTML = '';
+        detailSectionEl.classList.add('d-none');
+        currentSelectedTicketRow = null;
+        if (tickets.length === 0) {
+            ticketTableBodyEl.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">No tickets found for this user.</td></tr>';
+            return;
+        }
+        tickets.forEach(ticket => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${ticket.id}</td>
+            <td>${ticket.title || 'N/A'}</td>
+            <td>${ticket.created_at ? new Date(ticket.created_at).toLocaleDateString() : 'N/A'}</td>
+            <td>${ticket.status || 'N/A'}</td>
+          `;
+          row.onclick = () => {
+            if (currentSelectedTicketRow) currentSelectedTicketRow.classList.remove('active-ticket-row');
+            row.classList.add('active-ticket-row');
+            currentSelectedTicketRow = row;
+            showDetailsForUserPage(ticket.id);
+          };
+          ticketTableBodyEl.appendChild(row);
+        });
+      } catch (error) {
+        console.error(`Failed to load tickets for ${username}:`, error);
+        displayStatusMessageUsers(`Error loading tickets for ${username}: ${error.message}`, 'danger');
+        selectedUserTitleEl.textContent = `Error loading tickets`;
+      }
+    }
+
+    async function showDetailsForUserPage(id) {
+        try {
+          const fetchUrl = `{{ url_for('get_ticket', ticket_id=0) }}`.replace('0', id);
+          const res = await fetch(fetchUrl);
+          if (!res.ok) throw new Error(`HTTP error ${res.status} while fetching ticket ${id}`);
+          const ticket = await res.json();
+          if (!ticket || ticket.error) {
+              displayStatusMessageUsers(ticket.error || 'Error: Ticket details not found.', 'danger');
+              detailSectionEl.classList.add('d-none');
+              return;
+          }
+          originalTicketDataForUserPage = {...ticket};
+          document.getElementById('currentTicketIdUser').value = ticket.id;
+          document.getElementById('detailTicketIdUser').textContent = ticket.id;
+          document.getElementById('detailTitleUser').value = ticket.title || '';
+          document.getElementById('detailDescriptionUser').value = ticket.description || '';
+          document.getElementById('detailRemediesUser').value = ticket.remedies || '';
+          document.getElementById('detailStatusUser').value = ticket.status || 'Open';
+          document.getElementById('detailCreatedByUser').textContent = ticket.created_by || 'N/A';
+          document.getElementById('detailCreatedAtUser').textContent = ticket.created_at ? new Date(ticket.created_at).toLocaleString() : 'N/A';
+          const screenshotContainer = document.getElementById('screenshotContainerUser');
+          screenshotContainer.innerHTML = '';
+          if (ticket.file_path && Array.isArray(ticket.file_path) && ticket.file_path.length > 0 && ticket.file_path[0] !== "") {
+            ticket.file_path.forEach(path => {
+              if(path && path.trim()){
+                const filePathTrimmed = path.trim();
+                const img = document.createElement('img');
+                img.src = `/${filePathTrimmed}`;
+                img.className = 'screenshot-img';
+                img.alt = `Screenshot: ${filePathTrimmed.split('/').pop()}`;
+                img.title = 'Click to enlarge';
+                img.onerror = () => { img.style.display='none'; console.warn(`Failed to load image: /${filePathTrimmed}`); };
+                img.onclick = function() { openImageModalUsers(this.src, this.alt); };
+                screenshotContainer.appendChild(img);
+              }
+            });
+          }
+          if(screenshotContainer.childElementCount === 0) {
+              screenshotContainer.innerHTML = '<span class="text-muted" style="font-size: 0.9em;">No screenshots attached.</span>';
+          }
+          const remedyDocLinkContainer = document.getElementById('remedyDocLinkContainerUsers');
+          remedyDocLinkContainer.innerHTML = '<span class="text-muted" style="font-size: 0.9em;">No remedy document attached.</span>';
+          if (ticket.remedy_doc_path && ticket.remedy_doc_path.trim()) {
+              const docPath = ticket.remedy_doc_path.trim();
+              const fileName = docPath.split('/').pop();
+              const isImageDoc = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'].some(ext => docPath.toLowerCase().endsWith(ext));
+              remedyDocLinkContainer.innerHTML = '';
+              if (isImageDoc) {
+                  const imgLink = document.createElement('img');
+                  imgLink.src = `/${docPath}`;
+                  imgLink.className = 'screenshot-img';
+                  imgLink.alt = `Remedy Document: ${fileName}`;
+                  imgLink.title = 'Click to enlarge';
+                  imgLink.style.maxWidth = '100px'; imgLink.style.maxHeight = '70px';
+                  imgLink.onerror = () => { imgLink.style.display='none'; console.warn(`Failed to load remedy doc image: /${docPath}`); };
+                  imgLink.onclick = function() { openImageModalUsers(this.src, this.alt); };
+                  remedyDocLinkContainer.appendChild(imgLink);
+              } else {
+                  const remedyLink = document.createElement('a');
+                  remedyLink.href = `/${docPath}`;
+                  remedyLink.textContent = fileName;
+                  remedyLink.target = "_blank";
+                  remedyLink.className = "remedy-doc-link";
+                  remedyDocLinkContainer.appendChild(remedyLink);
+              }
+          }
+          const editButton = document.getElementById('editBtnUsers');
+          if (ticket.created_by === loggedInUserForUserPage) {
+              editButton.classList.remove('d-none');
+          } else {
+              editButton.classList.add('d-none');
+          }
+          document.getElementById('saveBtnUsers').classList.add('d-none');
+          document.getElementById('cancelBtnUsers').classList.add('d-none');
+          setEditModeUsers(false);
+          detailSectionEl.classList.remove('d-none');
+        } catch (error) {
+            console.error('Failed to show ticket details:', error);
+            displayStatusMessageUsers(`Error loading ticket details: ${error.message}`, 'danger');
+            detailSectionEl.classList.add('d-none');
+        }
+      }
+
+    function setEditModeUsers(isEditing) {
+        const fieldsToToggle = ['detailTitleUser', 'detailDescriptionUser', 'detailRemediesUser'];
+        fieldsToToggle.forEach(id => {
+            const el = document.getElementById(id);
+            el.readOnly = !isEditing;
+            el.classList.toggle('form-control-display', !isEditing);
+            el.classList.toggle('form-control-editable', isEditing);
+        });
+        const statusSelect = document.getElementById('detailStatusUser');
+        statusSelect.disabled = !isEditing;
+        statusSelect.classList.toggle('form-control-display', !isEditing);
+        statusSelect.classList.toggle('form-control-editable', isEditing);
+        document.getElementById('editBtnUsers').classList.toggle('d-none', isEditing);
+        document.getElementById('saveBtnUsers').classList.toggle('d-none', !isEditing);
+        document.getElementById('cancelBtnUsers').classList.toggle('d-none', !isEditing);
+    }
+
+    function enableEditModeUsers() { setEditModeUsers(true); }
+
+    function cancelEditModeUsers() {
+        document.getElementById('detailTitleUser').value = originalTicketDataForUserPage.title || '';
+        document.getElementById('detailDescriptionUser').value = originalTicketDataForUserPage.description || '';
+        document.getElementById('detailRemediesUser').value = originalTicketDataForUserPage.remedies || '';
+        document.getElementById('detailStatusUser').value = originalTicketDataForUserPage.status || 'Open';
+        setEditModeUsers(false);
+    }
+
+    async function saveTicketChangesUsers() {
+      const id = document.getElementById('currentTicketIdUser').value;
+      const updatedData = {
+        title: document.getElementById('detailTitleUser').value,
+        description: document.getElementById('detailDescriptionUser').value,
+        remedies: document.getElementById('detailRemediesUser').value,
+        status: document.getElementById('detailStatusUser').value
+      };
+      try {
+        const fetchUrl = `{{ url_for('update_ticket', ticket_id=0) }}`.replace('0',id);
+        const res = await fetch(fetchUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedData)
+        });
+        const result = await res.json().catch(() => ({error: `HTTP error ${res.status}`}));
+        if (res.ok && result.message) {
+          displayStatusMessageUsers(result.message, 'success');
+          setEditModeUsers(false);
+          const activeUserItem = document.querySelector('.user-item.active');
+          if (activeUserItem) {
+             loadTicketsForUser(activeUserItem.textContent);
+          }
+          showDetailsForUserPage(id); // Re-show to reflect changes if not fully handled by loadTicketsForUser
+        } else {
+          displayStatusMessageUsers(`Error: ${result.error || 'Failed to update ticket.'}`, 'danger');
+        }
+      } catch (error) {
+        console.error('Error saving ticket:', error);
+        displayStatusMessageUsers(`Error saving ticket: ${error.message}`, 'danger');
+      }
+    }
+
+    function displayStatusMessageUsers(message, type = 'info') {
+        const statusDiv = document.getElementById('statusMessagesUsers');
+        statusDiv.innerHTML = '';
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type === 'danger' ? 'danger' : (type === 'success' ? 'success' : 'info')}`;
+        alertDiv.setAttribute('role', 'alert');
+        alertDiv.textContent = message;
+        statusDiv.appendChild(alertDiv);
+        setTimeout(() => { statusDiv.innerHTML = ''; }, 7000);
+    }
+
+    function checkUrlFragmentForUser() {
+        if (window.location.hash) {
+            const usernameFromHash = decodeURIComponent(window.location.hash.substring(1));
+            if (usernameFromHash) {
+                const userItems = userListEl.querySelectorAll('.user-item');
+                for (let item of userItems) {
+                    if (item.textContent === usernameFromHash) {
+                        item.click();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        loadUsers();
+        const mobileNavToggle = document.querySelector('.mobile-nav-toggle');
+        const mainNav = document.getElementById('mainNav'); // Target the correct ID
+        const hamburgerIcon = mobileNavToggle ? mobileNavToggle.querySelector('.fa-bars') : null;
+        const closeIcon = mobileNavToggle ? mobileNavToggle.querySelector('.fa-times') : null;
+
+        if (mobileNavToggle && mainNav && hamburgerIcon && closeIcon) {
+            mobileNavToggle.addEventListener('click', function() {
+                const isExpanded = mainNav.classList.toggle('active');
+                mobileNavToggle.classList.toggle('active');
+                mobileNavToggle.setAttribute('aria-expanded', isExpanded);
+                hamburgerIcon.style.display = isExpanded ? 'none' : 'inline';
+                closeIcon.style.display = isExpanded ? 'inline' : 'none';
+            });
+        }
+        document.addEventListener('click', function(event) {
+            if (mainNav && mainNav.classList.contains('active')) {
+                const isClickInsideNav = mainNav.contains(event.target);
+                const isClickOnToggle = mobileNavToggle ? mobileNavToggle.contains(event.target) : false;
+                if (!isClickInsideNav && !isClickOnToggle) {
+                    mainNav.classList.remove('active');
+                    mobileNavToggle.classList.remove('active');
+                    mobileNavToggle.setAttribute('aria-expanded', 'false');
+                    if (hamburgerIcon && closeIcon) {
+                        hamburgerIcon.style.display = 'inline';
+                        closeIcon.style.display = 'none';
+                    }
+                }
+            }
+        });
+    });
+  </script>
+</body>
+</html>

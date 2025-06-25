@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudKeeper Ticket Management System</title>
+    <!-- Consider adding a favicon here -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"> <!-- For icons -->
+    <style>
+        /* --- Global Styles & Variables --- */
+        :root {
+            --primary-color: #0052CC; /* Example CloudKeeper Blue */
+            --secondary-color: #0065FF; /* Lighter Blue for accents */
+            --cta-color: #00A3BF;      /* A distinct Teal/Cyan for CTAs like the original page */
+            --text-dark: #172B4D;
+            --text-light: #505F79;
+            --background-light: #F4F5F7;
+            --white: #FFFFFF;
+            --border-color: #DFE1E6;
+            --font-family: 'Inter', 'Arial', sans-serif; /* Modern, clean font */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            line-height: 1.6;
+            color: var(--text-dark);
+            background-color: var(--white);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--primary-color);
+        }
+
+        h1, h2, h3, h4 {
+            line-height: 1.3;
+            margin-bottom: 0.75em;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5em;
+            color: var(--text-dark);
+            margin-bottom: 20px;
+        }
+        .section-title-left {
+            text-align: left;
+            font-size: 2.2em;
+            color: var(--text-dark);
+            margin-bottom: 20px;
+        }
+
+
+        .section-subtitle {
+            text-align: center;
+            font-size: 1.1em;
+            color: var(--text-light);
+            margin-bottom: 40px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 12px 28px;
+            border-radius: 6px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: var(--cta-color); /* Using distinct CTA color */
+            color: var(--white);
+        }
+        .btn-primary:hover {
+            background-color: #008DAA; /* Darker shade of CTA */
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+        .btn-secondary:hover {
+            background-color: var(--primary-color);
+            color: var(--white);
+        }
+
+        .btn-large {
+            padding: 15px 35px;
+            font-size: 1.1em;
+        }
+
+        /* --- Header --- */
+        .site-header {
+            background-color: var(--white);
+            padding: 15px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo img {
+            height: 40px; /* Adjust as needed */
+        }
+
+        .main-nav ul {
+            list-style: none;
+            display: flex;
+        }
+
+        .main-nav li {
+            margin-left: 25px;
+        }
+
+        .main-nav a {
+            color: var(--text-dark);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        .main-nav a:hover {
+            color: var(--primary-color);
+        }
+
+        .header-cta .btn {
+            margin-left: 15px;
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.8em;
+            color: var(--text-dark);
+            cursor: pointer;
+        }
+
+
+        /* --- Hero Section --- */
+        .hero-section {
+            background-color: var(--background-light); /* Light background */
+            padding: 80px 0;
+            overflow: hidden;
+        }
+
+        .hero-container {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+            min-height: 70vh; /* Example: ensure hero takes up a good portion of the viewport */
+        }
+
+        .hero-content { /* Combined hero-content and hero-content-no-form */
+            flex: 1;
+            max-width: 550px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+
+        .hero-headline {
+            font-size: 3em; /* Large headline */
+            font-weight: 700;
+            color: var(--text-dark);
+            margin-bottom: 20px;
+        }
+
+        .hero-subheadline {
+            font-size: 1.2em;
+            color: var(--text-light);
+            margin-bottom: 40px; /* More space if no form below */
+        }
+
+        .hero-main-cta {
+            margin-top: 20px; /* Space above the button */
+        }
+
+
+        .hero-image-area {
+            flex: 1;
+            text-align: center; /* Or adjust as needed */
+        }
+        .hero-image-area img {
+            border-radius: 8px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            /* Add animation if desired */
+        }
+
+
+        /* --- Features Section --- */
+        .features-section {
+            padding: 80px 0;
+            background-color: var(--white);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .feature-item {
+            background-color: var(--white);
+            padding: 30px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            text-align: left; /* Or center if preferred */
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.08);
+        }
+
+        .feature-icon {
+            font-size: 2.5em;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            /* If using images for icons: */
+            /* width: 50px; height: 50px; margin-bottom: 15px; */
+        }
+
+        .feature-item h3 {
+            font-size: 1.4em;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+        }
+        .feature-item p {
+            color: var(--text-light);
+            font-size: 0.95em;
+        }
+
+        /* --- How It Works Section --- */
+        .how-it-works-section {
+            padding: 80px 0;
+            background-color: var(--background-light);
+        }
+
+        .steps-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .step-item {
+            padding: 20px;
+        }
+
+        .step-number-icon {
+            position: relative;
+            margin-bottom: 20px;
+            display: inline-block; /* To center */
+        }
+        .step-number-icon img { /* Icon for the step */
+            height: 60px; /* Adjust */
+            margin-bottom: 10px;
+        }
+        .step-number-icon span { /* The number bubble */
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-color: var(--secondary-color);
+            color: var(--white);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 0.9em;
+            border: 2px solid var(--white);
+        }
+
+        .step-item h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+        .step-item p {
+            color: var(--text-light);
+        }
+        .step-image {
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.07);
+            max-width: 250px; /* Adjust if needed */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* --- Solutions Highlight Section --- */
+        .solutions-highlight-section {
+            padding: 80px 0;
+            background-color: var(--white);
+        }
+        .solution-container {
+            display: flex;
+            align-items: center;
+            gap: 50px;
+        }
+        .solution-image {
+            flex: 1;
+            max-width: 500px;
+        }
+        .solution-image img {
+            border-radius: 8px;
+        }
+        .solution-content {
+            flex: 1;
+        }
+        .solution-content ul {
+            list-style: none;
+            margin: 20px 0;
+        }
+        .solution-content li {
+            margin-bottom: 10px;
+            color: var(--text-light);
+            display: flex;
+            align-items: center;
+        }
+        .solution-content li i {
+            color: var(--cta-color); /* Checkmark icon color */
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        /* --- Testimonial Section --- */
+        .testimonial-section {
+            padding: 80px 0;
+            background-color: var(--background-light);
+        }
+        .testimonial-slider {
+            display: flex; /* Basic for now, a real slider needs JS */
+            gap: 30px;
+            overflow-x: auto; /* Allows horizontal scroll for more items */
+            padding-bottom: 20px; /* Space for scrollbar */
+        }
+        .testimonial-item {
+            flex: 0 0 45%; /* Adjust width, e.g., for 2 visible items */
+            min-width: 320px;
+            background-color: var(--white);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+        .customer-photo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 15px auto;
+            object-fit: cover;
+        }
+        .testimonial-item p {
+            font-style: italic;
+            color: var(--text-light);
+            margin-bottom: 15px;
+            font-size: 1.05em;
+        }
+        .testimonial-item h4 {
+            font-size: 1em;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        /* --- Final CTA Section --- */
+        .final-cta-section {
+            padding: 80px 0;
+            background-color: var(--primary-color); /* Primary color background */
+            color: var(--white);
+            text-align: center;
+        }
+        .final-cta-section h2 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        .final-cta-section p {
+            font-size: 1.15em;
+            margin-bottom: 30px;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            opacity: 0.9;
+        }
+        .final-cta-section .btn-primary { /* Make CTA button stand out */
+            background-color: var(--white);
+            color: var(--primary-color);
+            border: 2px solid var(--white);
+        }
+        .final-cta-section .btn-primary:hover {
+            background-color: transparent;
+            color: var(--white);
+        }
+        .sub-cta-text {
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+        .sub-cta-text a {
+            color: var(--white);
+            font-weight: 600;
+            text-decoration: underline;
+        }
+
+
+        /* --- Footer --- */
+        .site-footer {
+            background-color: #172B4D; /* Dark footer */
+            color: #B3BAC5; /* Light text for dark footer */
+            padding: 60px 0 30px 0;
+            font-size: 0.9em;
+        }
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .footer-logo {
+            max-width: 150px; /* Adjust */
+            margin-bottom: 15px;
+        }
+        .footer-about p {
+            margin-bottom: 15px;
+            line-height: 1.7;
+        }
+        .social-icons a {
+            color: #B3BAC5;
+            margin-right: 15px;
+            font-size: 1.3em;
+            transition: color 0.3s ease;
+        }
+        .social-icons a:hover {
+            color: var(--white);
+        }
+        .footer-links h4 {
+            color: var(--white);
+            margin-bottom: 15px;
+            font-size: 1.1em;
+        }
+        .footer-links ul {
+            list-style: none;
+        }
+        .footer-links li {
+            margin-bottom: 10px;
+        }
+        .footer-links a {
+            color: #B3BAC5;
+            transition: color 0.3s ease;
+        }
+        .footer-links a:hover {
+            color: var(--white);
+            text-decoration: underline;
+        }
+        .footer-bottom {
+            border-top: 1px solid #30405F; /* Subtle separator */
+            padding-top: 30px;
+            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .footer-bottom p {
+            margin-bottom: 5px;
+        }
+
+
+        /* --- Responsive Design --- */
+        @media (max-width: 992px) {
+            .section-title { font-size: 2em; }
+            .hero-headline { font-size: 2.5em; }
+            .hero-container { flex-direction: column; text-align: center; }
+            .hero-content { /* hero-content-no-form specific styles merged here */
+                max-width: 100%;
+                margin-bottom: 30px;
+                text-align: center; /* Center text on mobile when stacked */
+            }
+            .hero-main-cta {
+                text-align: center;
+            }
+            .hero-image-area { margin-top: 30px; }
+
+
+            .solution-container { flex-direction: column; }
+            .solution-image { margin-bottom: 30px; max-width: 100%; }
+            .section-title-left { text-align: center;}
+
+            .main-nav {
+                display: none;
+                flex-direction: column;
+                position: absolute;
+                top: 70px; /* Adjust based on header height */
+                left: 0;
+                width: 100%;
+                background-color: var(--white);
+                padding: 10px 0;
+                box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+            }
+            .main-nav.active { display: flex; }
+            .main-nav li { margin: 10px 20px; text-align: center; }
+            .header-cta { display: none; } /* Hide or restyle for mobile menu */
+            .header-cta.active {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                padding: 10px 20px;
+                background-color: var(--white);
+                position: absolute;
+                top: calc(70px + 150px); /* Rough estimate, adjust based on nav items */
+                left: 0;
+                width: 100%;
+                box-shadow: 0 5px 10px rgba(0,0,0,0.1);
+            }
+            .header-cta.active .btn { margin: 5px 0; width: 80%;}
+
+
+            .mobile-menu-toggle { display: block; }
+        }
+
+        @media (max-width: 768px) {
+            .hero-headline { font-size: 2.2em; }
+            .features-grid { grid-template-columns: 1fr; } /* Stack features */
+            .steps-container { grid-template-columns: 1fr; }
+            .testimonial-slider { flex-direction    : column; align-items: center; }
+            .testimonial-item { flex-basis: 80%; }
+            .footer-grid { grid-template-columns: 1fr; text-align: center; }
+            .footer-about, .footer-links { margin-bottom: 20px; }
+            .social-icons { justify-content: center; display:flex; }
+            .footer-bottom { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        <div class="container header-container">
+            <a href="#" class="logo">
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Ticket Management System Dashboard">
+
+            </a>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#how-it-works">How It Works</a></li>
+                    <li><a href="#solutions">Solutions</a></li>
+                    <li><a href="https://mail.google.com/mail/?view=cm&fs=1&to=monish.jodha@cloudkeeper.com&su=Regarding%20Your%20Ticket%20System&body=Hello%20Monish%2C%0D%0A%0D%0AI%20am%20interested%20in..."
+                    target="_blank"
+                    rel="noopener noreferrer">Contact Us</a> </li>                  </ul>
+            </nav>
+            
+            <button class="mobile-menu-toggle" aria-label="Toggle menu"><i class="fas fa-bars"></i></button>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero-section">
+            <div class="container hero-container">
+                <div class="hero-content"> 
+                    <h1 class="hero-headline">Streamline Your Support. Delight Your Customers.</h1>
+                    <p class="hero-subheadline">
+                        Discover CloudKeeper's powerful and intuitive Ticket Management System, designed to help your team resolve issues faster, improve collaboration, and boost customer satisfaction.
+                    </p>
+                    <div class="hero-main-cta">
+                        <a href="/form" class="btn btn-primary btn-large">Get Started</a>
+                    </div>
+                </div>
+                <div class="hero-image-area">
+                    <img src="{{ url_for('static', filename='images/banner.svg') }}" alt="Ticket Management System Dashboard">
+
+                </div>
+            </div>
+        </section>
+
+
+        <section id="features" class="features-section">
+            <div class="container">
+                <h2 class="section-title">Everything You Need for Exceptional Support</h2>
+                <p class="section-subtitle">Our Ticket Management System is packed with features to empower your team.</p>
+                <div class="features-grid">
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-ticket-alt"></i></div>
+                        <h3>Centralized Ticketing</h3>
+                        <p>Manage all customer inquiries from various channels (email, web portal, chat) in one unified dashboard.</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-cogs"></i></div>
+                        <h3>Automation Workflows</h3>
+                        <p>Automate ticket routing, escalations, and repetitive tasks to save time and ensure timely responses.</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-book"></i></div>
+                        <h3>Knowledge Base Integration</h3>
+                        <p>Empower Trainees with a built-in knowledge base for quick self-service and consistent answers.</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                        <h3>Reporting & Analytics</h3>
+                        <p>Gain valuable insights into team performance, ticket trends, and customer satisfaction with comprehensive reports.</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-users"></i></div>
+                        <h3>Team Collaboration</h3>
+                        <p>Facilitate seamless collaboration among agents with internal notes, ticket assignments, and shared views.</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                        <h3>Task Management</h3>
+                        <p>Define and track Tasks to meet Senior expectations and contractual obligations.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="how-it-works" class="how-it-works-section">
+            <div class="container">
+                <h2 class="section-title">Effortless Ticket Management in 3 Simple Steps</h2>
+                <div class="steps-container">
+                    <div class="step-item">
+                        
+                        <h3>Capture & Organize</h3>
+                        <p>Tickets are automatically created from emails, forms, or chat, and intelligently categorized.</p>
+                    </div>
+                    <div class="step-item">
+                        
+                        <h3>Assign & Resolve</h3>
+                        <p>Route tickets to the right agents or teams, collaborate effectively, and resolve issues with all context at hand.</p>
+                    </div>
+                    <div class="step-item">
+                        
+                        <h3>Track & Improve</h3>
+                        <p>Monitor progress, analyze performance, gather feedback, and continuously optimize your support operations.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="solutions" class="solutions-highlight-section">
+            <div class="container solution-container">
+                <div class="solution-image">
+                    <img src="{{ url_for('static', filename='images/2banner.svg') }}" alt="Ticket Management System Dashboard">
+                </div>
+                <div class="solution-content">
+                    <h2 class="section-title-left">Designed for Trainees</h2>
+                    <p>Whether you have a small or a large Task, our flexible Ticket Management System scales with your needs. Perfect for:</p>
+                    <ul>
+                        <li><i class="fas fa-check-circle"></i> IT Support Teams</li>
+                        <li><i class="fas fa-check-circle"></i> Customer Service Departments</li>
+                        <li><i class="fas fa-check-circle"></i> HR & Internal Support</li>
+                        <li><i class="fas fa-check-circle"></i> Operations & Logistics</li>
+                    </ul>
+                    <a  href="{{ url_for('login') }}" class="btn btn-primary">Get Started</a>
+                </div>
+            </div>
+        </section>
+
+
+        <section id="contact" class="final-cta-section">
+            <div class="container">
+                <h2>Open for your Valuable Insights</h2>
+                <p>Mail me for any Suggestions and Improvements....</p>
+                <a href="https://mail.google.com/mail/?view=cm&fs=1&to=monish.jodha@cloudkeeper.com&su=Regarding%20Your%20Ticket%20System&body=Hello%20Monish%2C%0D%0A%0D%0AI%20am%20interested%20in..."
+                class="btn btn-primary btn-large"
+                target="_blank"
+                rel="noopener noreferrer">Mail Me!</a>        
+            </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-grid">
+            <div class="footer-about">
+                <img src="{{ url_for('static', filename='images/logo.svg') }}" alt="Ticket Management System Dashboard">
+                <p>CloudKeeper provides innovative solutions to help businesses optimize their operations and achieve excellence.</p>
+                <div class="social-icons">
+                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                </div>
+            </div>
+            <div class="footer-links">
+                <h4>Product</h4>
+                <ul>
+                    <li><a href="#">Ticket Management</a></li>
+                    <li><a href="#">Features</a></li>
+                    <li><a href="#">Integrations</a></li>
+                    <li><a href="#">Security</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>Company</h4>
+                <ul>
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </div>
+            <div class="footer-links">
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="#">Help Center</a></li>
+                    <li><a href="#">API Documentation</a></li>
+                    <li><a href="#">Case Studies</a></li>
+                    <li><a href="#">Webinars</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="container footer-bottom">
+            <p>© 2025 Team-Laadla. All rights reserved.</p>
+            <p><a href="#">Privacy Policy</a> | <a href="#">Terms of Service</a></p>
+        </div>
+    </footer>
+
+    <script>
+        const menuToggle = document.querySelector('.mobile-menu-toggle');
+        const mainNav = document.querySelector('.main-nav');
+        const headerCta = document.querySelector('.header-cta');
+
+        if (menuToggle) {
+            menuToggle.addEventListener('click', () => {
+                mainNav.classList.toggle('active');
+                headerCta.classList.toggle('active');
+            });
+        }
+    </script>
+</body>
+</html>

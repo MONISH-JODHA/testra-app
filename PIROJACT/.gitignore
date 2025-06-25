@@ -1,0 +1,4 @@
+uploads
+.env
+tickets.db
+.gitignoredocker.env
